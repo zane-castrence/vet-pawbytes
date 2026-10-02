@@ -1,0 +1,86 @@
+.parallax {
+  --pb-bg: #FFFFFF;
+  --pb-brand: #0369A1;
+  --pb-text: #1F2937;
+  position: relative;
+  width: 100%;
+  background: var(--pb-bg);
+  color: var(--pb-text);
+}
+
+.parallax__header {
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.parallax__visuals {
+  position: absolute;
+  inset: 0;
+}
+
+.parallax__layers {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.parallax__layer-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.parallax__layer-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.parallax__title {
+  margin: 0;
+  font-family: "Caveat", cursive;
+  font-weight: 700;
+  font-size: clamp(6rem, 24vw, 22rem);
+  line-height: 1;
+  color: #FFFFFF;
+  text-shadow: 0 4px 24px rgba(3, 105, 161, 0.35);
+}
+
+.parallax__fade {
+  display: none;
+}
+
+.parallax__black-line-overflow {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 2px;
+  background: var(--pb-bg);
+  z-index: 5;
+}
+
+.parallax__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60svh;
+  overflow: hidden;
+  background: var(--pb-bg);
+}
+
+.osmo-icon-svg {
+  width: 8rem;
+  height: 8rem;
+  color: var(--pb-brand);
+}
