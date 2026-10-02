@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { getClinicCatalog, getAppointments } from "../services/api";
 import StatusBadge from "../components/StatusBadge";
 import Alert from "../components/Alert";
+import ServiceCard from "../components/ServiceCard";
 
 const localDate = () => {
   const d = new Date();
@@ -26,7 +27,7 @@ export default function BrowseServices() {
   const upcoming = (appointments || []).filter((a) => ["Pending", "Scheduled"].includes(a.status) && a.date >= localDate());
 
   return (
-    <section>
+    <section className="mx-auto max-w-[1376px] px-8 py-8">
       <h1>Good to see you, {user.name.split(" ")[0]}.</h1>
       <p>Keep every check-up, vaccine, and tail wag on track.</p>
       <Link to="/book">Book a visit</Link>
@@ -48,11 +49,11 @@ export default function BrowseServices() {
       <Link to="/my-appointments">View all appointments</Link>
 
       <h2>Our services</h2>
-      <ul className="grid gap-2">
-        {services.map((s) => (
-          <li key={s}>{s} <Link to={`/book?service=${encodeURIComponent(s)}`}>Book</Link></li>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {services.map((s, i) => (
+          <ServiceCard key={s} name={s} index={i} />
         ))}
-      </ul>
+      </div>
     </section>
   );
 }
