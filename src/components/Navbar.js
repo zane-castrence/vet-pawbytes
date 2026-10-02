@@ -10,6 +10,7 @@ export default function Navbar() {
     <header>
       <nav className="flex gap-4">
         <Link to="/">PawBytes</Link>
+        <Link to="/credits">Credits</Link>
         {!user && <Link to="/login">Log in</Link>}
         {!user && <Link to="/signup">Sign up</Link>}
         {isCustomer && <Link to="/services">Services</Link>}

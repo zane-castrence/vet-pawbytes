@@ -10,6 +10,8 @@ import BookingConfirmation from "./pages/BookingConfirmation";
 import MyAppointments from "./pages/MyAppointments";
 import MyPets from "./pages/MyPets";
 import AdminDashboard from "./pages/AdminDashboard";
+import Credits from "./pages/Credits";
+import Footer from "./components/Footer";
 
 const customer = (page) => <ProtectedRoute role="customer">{page}</ProtectedRoute>;
 
@@ -28,9 +30,11 @@ function App() {
           <Route path="/my-appointments" element={customer(<MyAppointments />)} />
           <Route path="/my-pets" element={customer(<MyPets />)} />
           <Route path="/admin" element={<ProtectedRoute role={["admin", "staff", "veterinarian"]}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/credits" element={<Credits />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      <Footer />
     </Router>
   );
 }
