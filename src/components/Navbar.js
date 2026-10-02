@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-export default function Navbar() {
-  return <div>Nav bar</div>;
-}
-=======
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -27,4 +22,3 @@ export default function Navbar() {
     </header>
   );
 }
->>>>>>> origin/arsi

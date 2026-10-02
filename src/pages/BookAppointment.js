@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-export default function BookAppointment() {
-  return <div>Book Appointment</div>;
-}
-=======
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -103,4 +98,3 @@ export default function BookAppointment() {
     </section>
   );
 }
->>>>>>> origin/arsi

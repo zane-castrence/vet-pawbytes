@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-export default function BookingConfirmation() {
-  return <div>Booking Confirmation</div>;
-}
-=======
 import { Link, Navigate, useLocation } from "react-router-dom";
 import StatusBadge from "../components/StatusBadge";
 
@@ -26,4 +21,3 @@ export default function BookingConfirmation() {
     </section>
   );
 }
->>>>>>> origin/arsi

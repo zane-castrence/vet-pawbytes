@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-export default function MyAppointments() {
-  return <div>My Appointments</div>;
-}
-=======
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getAppointments, updateAppointment, deleteAppointment } from "../services/api";
@@ -61,4 +56,3 @@ export default function MyAppointments() {
     </section>
   );
 }
->>>>>>> origin/arsi
