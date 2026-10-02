@@ -35,7 +35,7 @@ function getActiveClinicTeam() {
 
 const appointmentLabel = (appointment) => `${appointment.petName}'s appointment on ${appointment.date} at ${appointment.time}`;
 
-export const DEFAULT_SERVICES = ["Check-up", "Vaccination", "Grooming", "Dental cleaning", "Surgery consult", "Emergency"];
+export const DEFAULT_SERVICES = ["Check-up", "Vaccination", "Grooming", "Dental cleaning", "Surgery consult", "Emergency", "Deworming", "Other"];
 export const DEFAULT_VETS = ["Dr. Reyes", "Dr. Santos", "Dr. Lim"];
 export const DEMO_ADMIN = { name: "PawBytes Admin", email: "admin@pawbytes.local", password: "PawBytesAdmin2026!" };
 export const DEMO_STAFF = { name: "PawBytes Staff", email: "staff@pawbytes.local", password: "PawBytesStaff2026!" };
