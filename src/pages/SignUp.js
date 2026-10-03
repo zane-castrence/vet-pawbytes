@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AuthShell, { ALERT_CLASS, AuthButton, AuthDivider, AuthLink, AuthSection } from "../components/AuthShell";
+import GoogleButton from "../components/GoogleButton";
 import FormField from "../components/FormField";
 import Alert from "../components/Alert";
 import { validateSignUp } from "../utils/validators";
@@ -8,7 +10,7 @@ import { validateSignUp } from "../utils/validators";
 const emptyForm = {
   name: "", email: "", phone: "",
   address: "", city: "", province: "",
-  password: "", confirmPassword: "", agree: false
+  password: "", confirmPassword: "", agree: false,
 };
 
 export default function SignUp() {
@@ -46,36 +48,53 @@ export default function SignUp() {
     }
   };
 
+  const f = (name, label, extra = {}) => (
+    <FormField theme="auth" label={label} name={name} value={form[name]} onChange={change} error={errors[name]} {...extra} />
+  );
+
   return (
-    <section>
-      <h1>Sign up</h1>
-      <form onSubmit={submit} noValidate className="flex flex-col gap-2">
-        <Alert>{serverError}</Alert>
+    <AuthShell
+      wide
+      title="Create your account"
+      subtitle="Book appointments for your pets."
+      footer={<>Have an account? <AuthLink to="/login">Log in</AuthLink></>}
+    >
+      <GoogleButton label="Sign up with Google" />
+      <AuthDivider />
 
-        <h2>Personal information</h2>
-        <FormField label="Full name" name="name" value={form.name} onChange={change} error={errors.name} autoComplete="name" />
-        <FormField label="Email" name="email" type="email" value={form.email} onChange={change} error={errors.email} autoComplete="email" />
-        <FormField label="Mobile number" name="phone" type="tel" placeholder="09123456789" value={form.phone} onChange={change} error={errors.phone} autoComplete="tel" />
+      <form onSubmit={submit} noValidate className="flex flex-col gap-3">
+        <Alert className={ALERT_CLASS}>{serverError}</Alert>
 
-        <h2>Address</h2>
-        <FormField label="Street address" name="address" value={form.address} onChange={change} error={errors.address} autoComplete="street-address" />
-        <FormField label="City / Municipality" name="city" value={form.city} onChange={change} error={errors.city} />
-        <FormField label="Province" name="province" value={form.province} onChange={change} error={errors.province} />
+        <AuthSection>Personal information</AuthSection>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {f("name", "Full name", { autoComplete: "name" })}
+          {f("phone", "Mobile number", { type: "tel", placeholder: "09123456789", autoComplete: "tel" })}
+        </div>
+        {f("email", "Email", { type: "email", autoComplete: "email" })}
 
-        <h2>Account security</h2>
-        <FormField label="Password" name="password" type="password" value={form.password} onChange={change} error={errors.password} autoComplete="new-password" />
-        <FormField label="Confirm password" name="confirmPassword" type="password" value={form.confirmPassword} onChange={change} error={errors.confirmPassword} autoComplete="new-password" />
-
-        <div>
-          <label>
-            <input type="checkbox" name="agree" checked={form.agree} onChange={change} /> I agree to the clinic's terms and privacy policy
-          </label>
-          {errors.agree && <small role="alert">{errors.agree}</small>}
+        <AuthSection>Address</AuthSection>
+        {f("address", "Street address", { autoComplete: "street-address" })}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {f("city", "City / Municipality")}
+          {f("province", "Province")}
         </div>
 
-        <button disabled={loading}>{loading ? "Please wait…" : "Create account"}</button>
+        <AuthSection>Account security</AuthSection>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {f("password", "Password", { type: "password", autoComplete: "new-password" })}
+          {f("confirmPassword", "Confirm password", { type: "password", autoComplete: "new-password" })}
+        </div>
+
+        <div>
+          <label className="flex items-start gap-2 text-sm text-[#4B5563]">
+            <input type="checkbox" name="agree" checked={form.agree} onChange={change} className="mt-0.5 h-4 w-4 accent-[#047857]" />
+            I agree to the clinic's terms and privacy policy
+          </label>
+          {errors.agree && <small role="alert" className="mt-1 block text-xs text-red-600">{errors.agree}</small>}
+        </div>
+
+        <AuthButton loading={loading}>Create account</AuthButton>
       </form>
-      <p>Have an account? <Link to="/login">Log in</Link></p>
-    </section>
+    </AuthShell>
   );
 }
