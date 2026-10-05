@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { FooterBackground, TextHoverEffect } from "./ui/hover-footer";
 
 const footerLinks = [
@@ -33,6 +33,8 @@ const socialLinks = [
 ];
 
 export default function Footer() {
+    const { pathname } = useLocation();
+    if (["/login", "/signup"].includes(pathname)) return null;
     return (
         <footer className="font-figtree relative h-fit rounded-[20px] overflow-hidden m-8 border border-[#D8DEE3] text-[#4B5563]">
         <div className="max-w-7xl mx-auto p-14 z-40 relative">
