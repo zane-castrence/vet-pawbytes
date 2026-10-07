@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { createAppointment, getClinicCatalog, getPets, getUnavailableTimes } from "../services/api";
+import { createAppointment, createPet, getClinicCatalog, getPets, getUnavailableTimes } from "../services/api";
 import { validateAppointment } from "../utils/validators";
-import FormField from "../components/FormField";
-import Alert from "../components/Alert";
+import BookingModal from "../components/BookingModal";
+import BrowseServices from "./BrowseServices";
 
 // 8:00 AM to 5:00 PM in 30-minute slots
 const TIMES = Array.from({ length: 19 }, (_, i) => {
@@ -17,6 +17,7 @@ export default function BookAppointment() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [pets, setPets] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [catalog, setCatalog] = useState({ services: [], vets: [] });
   const [taken, setTaken] = useState([]);
   const [form, setForm] = useState({
@@ -30,7 +31,8 @@ export default function BookAppointment() {
   useEffect(() => {
     Promise.all([getPets(user.id), getClinicCatalog()])
       .then(([p, c]) => { setPets(p); setCatalog(c); })
-      .catch(() => setServerError("Couldn't load your pets and services. Refresh to try again."));
+      .catch(() => setServerError("Couldn't load your pets and services. Refresh to try again."))
+      .finally(() => setLoaded(true));
   }, [user.id]);
 
   // Re-check unavailable times whenever the vet or date changes
@@ -47,6 +49,13 @@ export default function BookAppointment() {
     } else {
       setForm({ ...form, [name]: value, ...(name === "date" || name === "vet" ? { time: "" } : {}) });
     }
+  };
+
+  // saves a new pet from step 1 and selects it (throws on invalid input)
+  const addPet = async (data) => {
+    const pet = await createPet(user.id, data);
+    setPets((list) => [...list, pet]);
+    setForm((f) => ({ ...f, petId: pet.id, petName: pet.name, species: pet.species }));
   };
 
   const submit = async (e) => {
@@ -67,34 +76,26 @@ export default function BookAppointment() {
     }
   };
 
-  const today = new Date().toISOString().slice(0, 10);
-
   return (
-    <section>
-      <h1>Book an appointment</h1>
-      {pets.length === 0 && <p>You need a pet profile first. <Link to="/my-pets">Add a pet</Link></p>}
-      <form onSubmit={submit} noValidate className="flex flex-col gap-2">
-        <Alert>{serverError}</Alert>
-        <FormField label="Pet" name="petId" as="select" value={form.petId} onChange={change} error={errors.petId}>
-          <option value="">Select…</option>
-          {pets.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.species})</option>)}
-        </FormField>
-        <FormField label="Service" name="service" as="select" value={form.service} onChange={change} error={errors.service}>
-          <option value="">Select…</option>
-          {catalog.services.map((s) => <option key={s}>{s}</option>)}
-        </FormField>
-        <FormField label="Veterinarian" name="vet" as="select" value={form.vet} onChange={change} error={errors.vet}>
-          <option value="">Select…</option>
-          {catalog.vets.map((v) => <option key={v}>{v}</option>)}
-        </FormField>
-        <FormField label="Date" name="date" type="date" min={today} value={form.date} onChange={change} error={errors.date} />
-        <FormField label="Time" name="time" as="select" value={form.time} onChange={change} error={errors.time}>
-          <option value="">Select…</option>
-          {TIMES.map((t) => <option key={t} value={t} disabled={taken.includes(t)}>{t}{taken.includes(t) ? " (booked)" : ""}</option>)}
-        </FormField>
-        <FormField label="Notes (optional)" name="notes" as="textarea" rows="3" value={form.notes} onChange={change} error={errors.notes} />
-        <button disabled={saving}>{saving ? "Booking…" : "Book appointment"}</button>
-      </form>
-    </section>
+    <>
+      {/* shown blurred behind the modal */}
+      <BrowseServices />
+      <BookingModal
+        loading={!loaded}
+        pets={pets}
+        services={catalog.services}
+        vets={catalog.vets}
+        times={TIMES}
+        taken={taken}
+        form={form}
+        errors={errors}
+        serverError={serverError}
+        saving={saving}
+        onChange={change}
+        onAddPet={addPet}
+        onSubmit={submit}
+        onClose={() => navigate("/services")}
+      />
+    </>
   );
 }
