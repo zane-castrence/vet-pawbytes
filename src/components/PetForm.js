@@ -5,6 +5,7 @@ import Alert from "./Alert";
 const EMPTY = {
   name: "", species: "", breed: "", sex: "", birthday: "",
   weightKg: "", vaccinationStatus: "Unknown", allergies: "", medicalNotes: "",
+  photoUrl: "",
 };
 const SPECIES = ["Dog", "Cat", "Bird", "Rabbit", "Other"];
 const AREA =
@@ -12,12 +13,15 @@ const AREA =
 const today = () =>
   new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
-export default function PetForm({ initial, submitLabel = "Save pet", onSubmit, onCancel }) {
+// onDelete is optional: pass it only when editing an existing pet
+export default function PetForm({ initial, submitLabel = "Save pet", onSubmit, onCancel, onDelete }) {
   const [form, setForm] = useState(() =>
     Object.fromEntries(Object.keys(EMPTY).map((k) => [k, initial?.[k] ?? EMPTY[k]]))
   );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -32,6 +36,18 @@ export default function PetForm({ initial, submitLabel = "Save pet", onSubmit, o
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setError("");
+    setDeleting(true);
+    try {
+      await onDelete();
+    } catch (err) {
+      setError(err.message);
+      setConfirming(false);
+      setDeleting(false);
     }
   };
 
@@ -62,6 +78,15 @@ export default function PetForm({ initial, submitLabel = "Save pet", onSubmit, o
         <FormField label="Allergies" name="allergies" theme="auth" value={form.allergies} onChange={change} />
       </div>
       <FormField
+        label="Photo URL (optional)"
+        name="photoUrl"
+        type="url"
+        theme="auth"
+        placeholder="https://…"
+        value={form.photoUrl}
+        onChange={change}
+      />
+      <FormField
         label="Medical notes"
         name="medicalNotes"
         as="textarea"
@@ -71,24 +96,64 @@ export default function PetForm({ initial, submitLabel = "Save pet", onSubmit, o
         onChange={change}
         className={AREA}
       />
-      <div className="flex flex-col-reverse gap-3 border-t border-[#D8DEE3] pt-6 sm:flex-row sm:justify-end">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="h-11 rounded-[8px] border border-[#D8DEE3] px-6 text-[15px] font-semibold hover:bg-[#F9FAFB]"
-          >
-            Cancel
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={saving}
-          className="h-11 rounded-[8px] bg-[#047857] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[#059669] disabled:opacity-60"
-        >
-          {saving ? "Saving…" : submitLabel}
-        </button>
-      </div>
+
+      {confirming ? (
+        <div className="flex flex-col gap-3 border-t border-[#D8DEE3] pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[14px] font-medium text-[#1F2937]">
+            Delete {initial?.name}? This can't be undone.
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={deleting}
+              className="h-11 rounded-[8px] border border-[#D8DEE3] px-6 text-[15px] font-semibold hover:bg-[#F9FAFB]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="h-11 rounded-[8px] bg-[#B91C1C] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#991B1B] disabled:opacity-60"
+            >
+              {deleting ? "Deleting…" : "Yes, delete"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col-reverse gap-3 border-t border-[#D8DEE3] pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="text-[14px] font-semibold text-[#B91C1C] hover:underline"
+              >
+                Delete pet
+              </button>
+            )}
+          </div>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="h-11 rounded-[8px] border border-[#D8DEE3] px-6 text-[15px] font-semibold hover:bg-[#F9FAFB]"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={saving}
+              className="h-11 rounded-[8px] bg-[#047857] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[#059669] disabled:opacity-60"
+            >
+              {saving ? "Saving…" : submitLabel}
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
