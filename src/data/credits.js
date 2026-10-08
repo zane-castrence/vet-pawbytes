@@ -79,6 +79,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@anurag-mishra22/components/progress-indicator",
         usedIn: "Booking steps (stepper inspiration)",
     },
+    {
+        name: "Dashboard Sidebar",
+        author: "Arun Dass",
+        authorUrl: "https://21st.dev/@arunjdass",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@arunjdass/components/dashboard-sidebar",
+        usedIn: "Sidebar and account menu (layout inspiration)",
+    },
     // add more entries here as you bring in components
 ];
 
