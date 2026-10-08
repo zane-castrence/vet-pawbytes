@@ -31,17 +31,13 @@ export default function MyPets() {
     load();
   };
 
+  // called from the Edit window; throws so PetForm shows the message
   const remove = async (pet) => {
-    if (!window.confirm(`Delete ${pet.name}'s profile?`)) return;
-    try {
-      await deletePet(user.id, pet.id);
-      setError("");
-      setMessage("Pet deleted.");
-      load();
-    } catch (err) {
-      setMessage("");
-      setError(err.message);
-    }
+    await deletePet(user.id, pet.id);
+    setModal(null);
+    setError("");
+    setMessage("Pet deleted.");
+    load();
   };
 
   return (
@@ -68,12 +64,17 @@ export default function MyPets() {
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {loaded && pets.length === 0 && <AddPetCard label="Add your first pet" onClick={() => setModal("new")} />}
         {pets.map((p) => (
-          <PetCard key={p.id} pet={p} onEdit={() => setModal(p)} onDelete={() => remove(p)} />
+          <PetCard key={p.id} pet={p} onEdit={() => setModal(p)} />
         ))}
       </div>
 
       {modal && (
-        <PetModal pet={modal === "new" ? null : modal} onSave={save} onClose={() => setModal(null)} />
+        <PetModal
+          pet={modal === "new" ? null : modal}
+          onSave={save}
+          onDelete={remove}
+          onClose={() => setModal(null)}
+        />
       )}
     </section>
   );
