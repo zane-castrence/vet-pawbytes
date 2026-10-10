@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getClinicCatalog, getAppointments } from "../services/api";
-import StatusBadge from "../components/StatusBadge";
 import Alert from "../components/Alert";
 import ServiceCard from "../components/ServiceCard";
+import AnimatedBanner from "../components/ui/animated-banner";
+import AppointmentCard from "../components/ui/appointment-card";
 
 const localDate = () => {
   const d = new Date();
@@ -25,31 +26,45 @@ export default function BrowseServices() {
   }, [user.id]);
 
   const upcoming = (appointments || []).filter((a) => ["Pending", "Scheduled"].includes(a.status) && a.date >= localDate());
+  const next = upcoming[0];
 
   return (
-    <section className="mx-auto max-w-[1376px] px-8 py-8">
-      <h1>Good to see you, {user.name.split(" ")[0]}.</h1>
-      <p>Keep every check-up, vaccine, and tail wag on track.</p>
-      <Link to="/book">Book a visit</Link>
-      <Alert>{error}</Alert>
+    <section className="mx-auto max-w-[1376px] px-4 py-6 font-figtree sm:px-8 sm:py-8">
+      <AnimatedBanner
+        title={`Good to see you, ${user.name.split(" ")[0]}.`}
+        subtitle={
+          next
+            ? `Next up: ${next.petName}, ${next.service}, ${next.date} at ${next.time}.`
+            : "Keep every check-up, vaccine, and tail wag on track."
+        }
+        deadline={next ? `${next.date}T${next.time}` : undefined}
+        deadlineLabel="Next visit in"
+        ctaLabel="Book a visit"
+        href="/book"
+      />
+      <Alert className="mt-4 rounded-lg bg-[#FEE2E2] px-4 py-3 text-[14px] font-medium text-[#991B1B]">{error}</Alert>
 
-      <h2>Your pet's schedule</h2>
-      {!appointments ? <p>Loading your visits…</p> : upcoming.length === 0 ? (
-        <p>Nothing on the calendar yet. <Link to="/book">Schedule a visit</Link></p>
+      <h2 className="mt-10 text-[28px] font-extrabold tracking-tight text-[#1F2937]">Your pet's schedule</h2>
+      {!appointments ? (
+        <p className="mt-4 text-[15px] text-[#4B5563]">Loading your visits…</p>
+      ) : upcoming.length === 0 ? (
+        <div className="mt-4 rounded-[20px] border-2 border-dashed border-[#2A3BD9]/30 bg-[#EEF2FF] p-6 text-[15px] text-[#4B5563]">
+          Nothing on the calendar yet.{" "}
+          <Link to="/book" className="font-semibold text-[#2A3BD9] underline underline-offset-2">Schedule a visit</Link>
+        </div>
       ) : (
-        <ul className="grid gap-2">
-          {upcoming.slice(0, 4).map((a) => (
-            <li key={a.id} className="flex gap-4">
-              <span><strong>{a.petName}</strong> ({a.species}) · {a.service} · {a.date} {a.time} · with {a.vet}</span>
-              <StatusBadge status={a.status} />
-            </li>
+        <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {upcoming.slice(0, 4).map((a, i) => (
+            <AppointmentCard key={a.id} appointment={a} index={i} />
           ))}
-        </ul>
+        </div>
       )}
-      <Link to="/my-appointments">View all appointments</Link>
+      <Link to="/my-appointments" className="mt-4 inline-block text-[14px] font-semibold text-[#2A3BD9] underline underline-offset-2">
+        View all appointments
+      </Link>
 
-      <h2>Our services</h2>
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <h2 className="mt-10 text-[28px] font-extrabold tracking-tight text-[#1F2937]">Our services</h2>
+      <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {services.map((s, i) => (
           <ServiceCard key={s} name={s} index={i} />
         ))}
