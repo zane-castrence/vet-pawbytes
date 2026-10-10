@@ -9,7 +9,7 @@ const EMPTY = {
 };
 const SPECIES = ["Dog", "Cat", "Bird", "Rabbit", "Other"];
 const AREA =
-  "rounded-lg border border-[#D8DEE3] bg-white px-3 py-2 text-[15px] text-[#1F2937] outline-none placeholder:text-[#9CA3AF] focus:border-[#0369A1] focus:ring-2 focus:ring-[#0369A1]/20";
+  "rounded-lg border border-[#D8DEE3] bg-white px-3 py-2 text-[15px] text-[#1F2937] outline-none placeholder:text-[#9CA3AF] focus:border-[#2A3BD9] focus:ring-2 focus:ring-[#2A3BD9]/20";
 const today = () =>
   new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 

@@ -81,7 +81,7 @@ export function AddPetCard({ onClick, label = "Add a pet", className = "h-[300px
     <button
       type="button"
       onClick={onClick}
-      className={`font-figtree flex w-full items-center justify-center rounded-[20px] border-2 border-dashed border-[#D8DEE3] text-[15px] font-semibold text-[#075985] transition-colors hover:border-[#0369A1] hover:bg-[#F0F9FF] ${className}`}
+      className={`font-figtree flex w-full items-center justify-center rounded-[20px] border-2 border-dashed border-[#D8DEE3] text-[15px] font-semibold text-[#1F2DB0] transition-colors hover:border-[#2A3BD9] hover:bg-[#EEF2FF] ${className}`}
     >
       + {label}
     </button>
@@ -122,7 +122,7 @@ export default function PetCard({ pet, selected = false, onSelect, onEdit }) {
       onKeyDown={key}
       className={`font-figtree relative w-full overflow-hidden rounded-[20px] border bg-white text-left text-[#1F2937] ${
         pickable ? "h-[300px] cursor-pointer" : "h-[380px]"
-      } ${selected ? "border-[#0369A1] ring-2 ring-[#E0F2FE]" : "border-[#D8DEE3]"}`}
+      } ${selected ? "border-[#2A3BD9] ring-2 ring-[#DCE5FF]" : "border-[#D8DEE3]"}`}
     >
       {/* Full cover photo, or placeholder when missing or broken */}
       {showPhoto ? (
@@ -154,7 +154,7 @@ export default function PetCard({ pet, selected = false, onSelect, onEdit }) {
       />
 
       {selected && (
-        <span className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-[#0369A1] text-white">
+        <span className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-[#2A3BD9] text-white">
           <Check className="h-4 w-4" strokeWidth={2.5} />
         </span>
       )}
@@ -206,7 +206,7 @@ export default function PetCard({ pet, selected = false, onSelect, onEdit }) {
             <button
               type="button"
               onClick={onEdit}
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#1F2937] text-[14px] font-semibold text-white transition-colors hover:bg-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0369A1]"
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#1F2937] text-[14px] font-semibold text-white transition-colors hover:bg-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A3BD9]"
             >
               <Pencil className="h-4 w-4" strokeWidth={1.75} />
               Edit

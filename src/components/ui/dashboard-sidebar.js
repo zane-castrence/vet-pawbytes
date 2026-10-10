@@ -11,13 +11,13 @@ const CUSTOMER_LINKS = [
 const STAFF_LINKS = [{ to: "/admin", label: "Dashboard", icon: LayoutDashboard }];
 
 const FOCUS =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0369A1]";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A3BD9]";
 
 const linkClass = ({ isActive }) =>
-  `flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] font-medium transition-colors ${FOCUS} ${
+  `flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] transition-colors ${FOCUS} ${
     isActive
-      ? "bg-[#E0F2FE] text-[#075985]"
-      : "text-[#4B5563] hover:bg-white hover:text-[#1F2937]"
+      ? "bg-white font-semibold text-[#1F2DB0]"
+      : "font-medium text-[#4B5563] hover:bg-white/60 hover:text-[#1F2937]"
   }`;
 
 export default function SidebarNav({ user, onLogout }) {
@@ -27,7 +27,7 @@ export default function SidebarNav({ user, onLogout }) {
   return (
     <div className="flex h-full w-[260px] flex-col p-3 font-figtree">
       <div className="mb-4 px-2 pt-2">
-        <span className="text-[18px] font-extrabold tracking-tight text-[#075985]">
+        <span className="text-[18px] font-extrabold tracking-tight text-[#1F2DB0]">
           PawBytes
         </span>
       </div>
@@ -35,7 +35,7 @@ export default function SidebarNav({ user, onLogout }) {
       {isCustomer && (
         <Link
           to="/book"
-          className={`mb-4 flex items-center justify-center gap-2 rounded-lg bg-[#047857] px-3 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#059669] ${FOCUS}`}
+          className={`mb-4 flex items-center justify-center gap-2 rounded-lg bg-[#D6347F] px-3 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-[#BE2A70] ${FOCUS}`}
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
           Book appointment
@@ -51,7 +51,7 @@ export default function SidebarNav({ user, onLogout }) {
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-[#D8DEE3] pt-3">
+      <div className="mt-auto border-t border-[#2A3BD9]/15 pt-3">
         <AccountMenu user={user} onLogout={onLogout} variant="row" />
       </div>
     </div>

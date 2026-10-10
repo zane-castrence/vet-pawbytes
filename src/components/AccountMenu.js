@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 
 const FOCUS =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0369A1]";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A3BD9]";
 
 const ITEM =
-  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[14px] font-medium text-[#4B5563] transition-colors hover:bg-[#F0F9FF] hover:text-[#1F2937]";
+  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[14px] font-medium text-[#4B5563] transition-colors hover:bg-[#EEF2FF] hover:text-[#1F2937]";
 
 // variant "row": full row for the sidebar (menu opens upward)
 // variant "avatar": round avatar for the top bar (menu opens downward)
@@ -34,7 +34,7 @@ export default function AccountMenu({ user, onLogout, variant = "row" }) {
   }, [open]);
 
   const avatar = (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D1FAE5] text-[13px] font-bold text-[#047857]">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F06AA6] text-[13px] font-bold text-[#1F2937]">
       {initial}
     </span>
   );

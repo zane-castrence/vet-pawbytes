@@ -52,7 +52,7 @@ export const TextHoverEffect = ({ text, duration, className = "" }) => {
             >
             {hovered && (
                 <>
-                <stop offset="0%" stopColor="#0369A1" />
+                <stop offset="0%" stopColor="#2A3BD9" />
                 <stop offset="25%" stopColor="#38BDF8" />
                 <stop offset="50%" stopColor="#10B981" />
                 <stop offset="75%" stopColor="#047857" />
@@ -90,7 +90,7 @@ export const TextHoverEffect = ({ text, duration, className = "" }) => {
         {/* blue outline that draws itself in on load */}
         <motion.text
             {...textProps}
-            stroke="#0369A1"
+            stroke="#2A3BD9"
             strokeWidth="0.4"
             strokeDasharray={6000}
             initial={{ strokeDashoffset: 6000 }}
@@ -118,7 +118,7 @@ export const FooterBackground = () => (
         className="absolute inset-0 z-0"
         style={{
         background:
-            "radial-gradient(125% 125% at 50% 10%, #FFFFFF 50%, #0369A133 100%)",
+            "radial-gradient(125% 125% at 50% 10%, #FFFFFF 50%, #2A3BD933 100%)",
         }}
     />
 );

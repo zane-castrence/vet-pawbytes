@@ -8,7 +8,7 @@ import StepProgress from "./ui/step-progress";
 
 const LABELS = ["Pet", "Veterinarian", "Details"];
 const AREA =
-  "rounded-lg border border-[#D8DEE3] bg-white px-3 py-2 text-[15px] text-[#1F2937] outline-none placeholder:text-[#9CA3AF] focus:border-[#0369A1] focus:ring-2 focus:ring-[#0369A1]/20 aria-[invalid=true]:border-red-500";
+  "rounded-lg border border-[#D8DEE3] bg-white px-3 py-2 text-[15px] text-[#1F2937] outline-none placeholder:text-[#9CA3AF] focus:border-[#2A3BD9] focus:ring-2 focus:ring-[#2A3BD9]/20 aria-[invalid=true]:border-red-500";
 const primary =
   "h-11 rounded-[8px] bg-[#047857] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[#059669] disabled:cursor-not-allowed disabled:opacity-50";
 const ghost = "h-11 rounded-[8px] border border-[#D8DEE3] px-6 text-[15px] font-semibold hover:bg-[#F9FAFB]";
@@ -105,7 +105,7 @@ export default function BookingModal({
                     key={v}
                     onClick={() => pick("vet", v)}
                     className={`flex items-center gap-3 rounded-[20px] border p-4 text-left transition-colors ${
-                      on ? "border-[#0369A1] bg-[#F0F9FF] ring-2 ring-[#E0F2FE]" : "border-[#D8DEE3] hover:border-[#0369A1]"
+                      on ? "border-[#2A3BD9] bg-[#EEF2FF] ring-2 ring-[#DCE5FF]" : "border-[#D8DEE3] hover:border-[#2A3BD9]"
                     }`}
                   >
                     {/* photo placeholder */}

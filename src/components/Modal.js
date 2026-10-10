@@ -32,7 +32,7 @@ export default function Modal({ title, subtitle, onClose, wide = false, children
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="h-9 w-9 shrink-0 rounded-[8px] text-[22px] leading-none text-[#4B5563] hover:bg-[#F0F9FF]"
+            className="h-9 w-9 shrink-0 rounded-[8px] text-[22px] leading-none text-[#4B5563] hover:bg-[#EEF2FF]"
           >
             ×
           </button>

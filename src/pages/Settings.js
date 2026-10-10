@@ -43,7 +43,7 @@ export default function Settings() {
           <Row label="Credits">
             <Link
               to="/credits"
-              className="text-[#0369A1] underline-offset-2 hover:underline"
+              className="text-[#2A3BD9] underline-offset-2 hover:underline"
             >
               View
             </Link>

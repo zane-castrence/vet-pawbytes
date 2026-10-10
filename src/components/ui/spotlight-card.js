@@ -6,8 +6,8 @@ const glowColorMap = {
     green: { base: 120, spread: 200 },
     red: { base: 0, spread: 200 },
     orange: { base: 30, spread: 200 },
-    // PawBytes: shifts from brand blue (#0369A1) toward brand green (#047857) across the screen
-    brand: { base: 200, spread: -38 },
+    // PawBytes: shifts from cobalt blue toward pink across the screen
+    brand: { base: 235, spread: 100 },
 };
 
 const sizeMap = {

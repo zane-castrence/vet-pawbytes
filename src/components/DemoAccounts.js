@@ -31,7 +31,7 @@ export default function DemoAccounts({ onPick }) {
               key={a.label}
               type="button"
               onClick={() => onPick(a.email, a.password)}
-              className="rounded-lg border border-[#D8DEE3] bg-white px-3 py-1.5 text-sm text-[#1F2937] hover:bg-[#F0F9FF]"
+              className="rounded-lg border border-[#D8DEE3] bg-white px-3 py-1.5 text-sm text-[#1F2937] hover:bg-[#EEF2FF]"
             >
               {a.label}
             </button>

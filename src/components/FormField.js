@@ -3,7 +3,7 @@ const THEMES = {
   auth: {
     label: "mb-1.5 text-[13px] font-medium text-[#374151]",
     input:
-      "h-11 rounded-lg border border-[#D8DEE3] bg-white px-3 text-[15px] text-[#1F2937] outline-none placeholder:text-[#9CA3AF] focus:border-[#0369A1] focus:ring-2 focus:ring-[#0369A1]/20 aria-[invalid=true]:border-red-500",
+      "h-11 rounded-lg border border-[#D8DEE3] bg-white px-3 text-[15px] text-[#1F2937] outline-none placeholder:text-[#9CA3AF] focus:border-[#2A3BD9] focus:ring-2 focus:ring-[#2A3BD9]/20 aria-[invalid=true]:border-red-500",
     error: "mt-1 text-xs text-red-600",
   },
 };

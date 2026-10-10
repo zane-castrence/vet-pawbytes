@@ -27,7 +27,7 @@ export function AuthButton({ loading, children }) {
 }
 
 export function AuthLink({ to, children }) {
-  return <Link to={to} className="font-semibold text-[#0369A1] hover:underline">{children}</Link>;
+  return <Link to={to} className="font-semibold text-[#2A3BD9] hover:underline">{children}</Link>;
 }
 
 export default function AuthShell({ title, subtitle, wide = false, children, footer }) {

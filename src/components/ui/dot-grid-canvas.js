@@ -16,7 +16,7 @@ export default function DotGridCanvas({ className = "" }) {
             const scene = new THREE.Scene();
             const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-            const blue = new THREE.Vector3(0.012, 0.412, 0.631); // #0369A1
+            const blue = new THREE.Vector3(0.012, 0.412, 0.631); // #2A3BD9
             const sky = new THREE.Vector3(0.22, 0.74, 0.97);     // #38BDF8
             const emerald = new THREE.Vector3(0.016, 0.471, 0.341); // #047857
 

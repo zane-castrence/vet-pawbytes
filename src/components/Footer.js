@@ -52,7 +52,7 @@ export default function Footer() {
                 <ul className="space-y-3">
                     {section.links.map((link) => (
                     <li key={link.label}>
-                        <Link to={link.to} className="hover:text-[#0369A1] transition-colors">
+                        <Link to={link.to} className="hover:text-[#2A3BD9] transition-colors">
                         {link.label}
                         </Link>
                     </li>
@@ -67,7 +67,7 @@ export default function Footer() {
                 {contactInfo.map((item, i) => (
                     <li key={i}>
                     {item.href ? (
-                        <a href={item.href} className="hover:text-[#0369A1] transition-colors">
+                        <a href={item.href} className="hover:text-[#2A3BD9] transition-colors">
                         {item.text}
                         </a>
                     ) : (
@@ -84,7 +84,7 @@ export default function Footer() {
             <div className="flex flex-col md:flex-row justify-between items-center text-sm space-y-4 md:space-y-0">
             <div className="flex space-x-6">
                 {socialLinks.map(({ label, href }) => (
-                <a key={label} href={href} className="hover:text-[#0369A1] transition-colors">
+                <a key={label} href={href} className="hover:text-[#2A3BD9] transition-colors">
                     {label}
                 </a>
                 ))}

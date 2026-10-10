@@ -45,7 +45,7 @@ export default function AppShell({ children }) {
   };
 
   return (
-    <div className="lg:flex lg:h-screen lg:overflow-hidden lg:bg-[#F0F9FF]">
+    <div className="lg:flex lg:h-screen lg:overflow-hidden lg:bg-[#DCE5FF]">
       <aside
         className={`hidden shrink-0 overflow-hidden transition-[width] duration-300 motion-reduce:transition-none lg:block ${
           open ? "w-[260px]" : "w-0"
@@ -67,7 +67,7 @@ export default function AppShell({ children }) {
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-label={open ? "Hide sidebar" : "Show sidebar"}
-              className="rounded-lg p-1.5 text-[#4B5563] transition-colors hover:bg-[#F0F9FF] hover:text-[#1F2937] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0369A1]"
+              className="rounded-lg p-1.5 text-[#4B5563] transition-colors hover:bg-[#EEF2FF] hover:text-[#1F2937] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A3BD9]"
             >
               {open ? (
                 <PanelLeftClose className="h-[18px] w-[18px]" strokeWidth={1.75} />
