@@ -51,7 +51,7 @@
   font-size: clamp(6rem, 24vw, 22rem);
   line-height: 1;
   color: #FFFFFF;
-  text-shadow: 0 4px 24px rgba(3, 105, 161, 0.35);
+  text-shadow: 0 4px 24px rgba(42, 59, 217, 0.35);
 }
 
 .parallax__fade {
