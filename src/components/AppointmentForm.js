@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import FormField from "./FormField";
 import Alert from "./Alert";
+import { Button, ALERT_ERROR, TEXTAREA_CLASS } from "./ui/app-controls";
 import { validateAppointment } from "../utils/validators";
 import { getClinicCatalog, getUnavailableTimes } from "../services/api";
 
@@ -12,7 +13,7 @@ const TIMES = Array.from({ length: 19 }, (_, i) => {
 });
 const empty = { ownerName: "", petName: "", species: "", service: "", vet: "", date: "", time: "", notes: "", status: "Pending" };
 
-// Used by admin/staff to book for a customer or edit an appointment
+// Used by admin/staff to book for a customer or edit an appointment (shown inside a Modal)
 export default function AppointmentForm({ initial, onSubmit, onCancel, canManageStatus = false }) {
   const [form, setForm] = useState(initial ? { ...empty, ...initial } : empty);
   const [errors, setErrors] = useState({});
@@ -51,32 +52,35 @@ export default function AppointmentForm({ initial, onSubmit, onCancel, canManage
   const options = (list) => list.map((o) => <option key={o}>{o}</option>);
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-2">
-      <h2>{editing ? "Edit appointment" : "Book for customer"}</h2>
-      <Alert>{serverError}</Alert>
-      <FormField label="Owner name" name="ownerName" value={form.ownerName} onChange={change} error={errors.ownerName} />
-      <FormField label="Pet name" name="petName" value={form.petName} onChange={change} error={errors.petName} />
-      <FormField label="Species" name="species" as="select" value={form.species} onChange={change} error={errors.species}>
-        <option value="">Select…</option>{options(SPECIES)}
-      </FormField>
-      <FormField label="Service" name="service" as="select" value={form.service} onChange={change} error={errors.service}>
-        <option value="">Select…</option>{options(catalog.services)}
-      </FormField>
-      <FormField label="Veterinarian" name="vet" as="select" value={form.vet} onChange={change} error={errors.vet}>
-        <option value="">Select…</option>{options(catalog.vets)}
-      </FormField>
-      <FormField label="Date" name="date" type="date" value={form.date} onChange={change} error={errors.date} />
-      <FormField label="Time" name="time" as="select" value={form.time} onChange={change} error={errors.time}>
-        <option value="">Select…</option>
-        {TIMES.map((t) => <option key={t} value={t} disabled={taken.includes(t)}>{t}{taken.includes(t) ? " (booked)" : ""}</option>)}
-      </FormField>
-      {canManageStatus && (
-        <FormField label="Status" name="status" as="select" value={form.status} onChange={change}>{options(STATUSES)}</FormField>
-      )}
-      <FormField label="Notes (optional)" name="notes" as="textarea" rows="3" value={form.notes} onChange={change} error={errors.notes} />
-      <div className="flex gap-2">
-        <button disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Book appointment"}</button>
-        {onCancel && <button type="button" onClick={onCancel}>Cancel</button>}
+    <form onSubmit={submit} noValidate className="font-figtree">
+      <Alert className={ALERT_ERROR}>{serverError}</Alert>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField theme="auth" label="Owner name" name="ownerName" value={form.ownerName} onChange={change} error={errors.ownerName} />
+        <FormField theme="auth" label="Pet name" name="petName" value={form.petName} onChange={change} error={errors.petName} />
+        <FormField theme="auth" label="Species" name="species" as="select" value={form.species} onChange={change} error={errors.species}>
+          <option value="">Select…</option>{options(SPECIES)}
+        </FormField>
+        <FormField theme="auth" label="Service" name="service" as="select" value={form.service} onChange={change} error={errors.service}>
+          <option value="">Select…</option>{options(catalog.services)}
+        </FormField>
+        <FormField theme="auth" label="Veterinarian" name="vet" as="select" value={form.vet} onChange={change} error={errors.vet}>
+          <option value="">Select…</option>{options(catalog.vets)}
+        </FormField>
+        <FormField theme="auth" label="Date" name="date" type="date" value={form.date} onChange={change} error={errors.date} />
+        <FormField theme="auth" label="Time" name="time" as="select" value={form.time} onChange={change} error={errors.time}>
+          <option value="">Select…</option>
+          {TIMES.map((t) => <option key={t} value={t} disabled={taken.includes(t)}>{t}{taken.includes(t) ? " (booked)" : ""}</option>)}
+        </FormField>
+        {canManageStatus && (
+          <FormField theme="auth" label="Status" name="status" as="select" value={form.status} onChange={change}>{options(STATUSES)}</FormField>
+        )}
+        <div className="sm:col-span-2">
+          <FormField theme="auth" className={TEXTAREA_CLASS} label="Notes (optional)" name="notes" as="textarea" rows="3" value={form.notes} onChange={change} error={errors.notes} />
+        </div>
+      </div>
+      <div className="mt-6 flex justify-end gap-2">
+        {onCancel && <Button variant="secondary" onClick={onCancel}>Cancel</Button>}
+        <Button type="submit" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Book appointment"}</Button>
       </div>
     </form>
   );
