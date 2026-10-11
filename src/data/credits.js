@@ -111,7 +111,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@ravikatiyar162/components/project-data-table",
         usedIn: "My appointments and admin dashboard tables (layout inspiration)",
     },
-    // add more entries here as you bring in components
+    {
+        name: "GitHub Contribution Graph 3D Heatmap",
+        author: "Kedhareswer Naidu",
+        authorUrl: "https://21st.dev/@kedhareswer",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@kedhareswer/components/contribution-skyline",
+        usedIn: "Admin Stats page activity visualization",
+    },
 ];
 
 export default credits;
