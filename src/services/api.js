@@ -417,29 +417,69 @@ export async function createAppointment(userId, data, { requirePetProfile = fals
 // PUT /api/appointments/:id
 export async function updateAppointment(id, data) {
   await wait();
+
   const all = read("appointments", []);
   const existing = all.find((appointment) => appointment.id === id);
+
   if (!existing) fail("Appointment not found.");
-  if (isTaken(all, data, id)) fail(`${data.vet} is already booked at that time. Pick another slot.`);
-  const updated = { ...existing, ...data };
-  write("appointments", all.map((a) => (a.id === id ? updated : a)));
-  if (data.status !== existing.status && ["Scheduled", "Completed", "Cancelled"].includes(data.status)) {
+
+  if (isTaken(all, data, id)) {
+    fail(`${data.vet} is already booked at that time. Pick another slot.`);
+  }
+
+  const updated = {
+    ...existing,
+    ...data,
+    ...(data.status === "Completed"
+      ? { completedAt: new Date().toISOString() }
+      : {}),
+  };
+
+  write(
+    "appointments",
+    all.map((appointment) =>
+      appointment.id === id ? updated : appointment,
+    ),
+  );
+
+  window.dispatchEvent(new Event("pawbytes-appointments-updated"));
+
+  if (
+    data.status !== existing.status &&
+    ["Scheduled", "Completed", "Cancelled"].includes(data.status)
+  ) {
     const approved = data.status === "Scheduled";
     const completed = data.status === "Completed";
-    const recipients = new Set([existing.userId, ...getActiveClinicTeam()]);
-    const title = approved ? "Appointment approved" : completed ? "Visit completed" : "Appointment canceled";
+    const recipients = new Set([
+      existing.userId,
+      ...getActiveClinicTeam(),
+    ]);
+
+    const title = approved
+      ? "Appointment approved"
+      : completed
+        ? "Visit completed"
+        : "Appointment canceled";
+
     const message = approved
       ? `${appointmentLabel(updated)} was approved.`
       : completed
         ? `${appointmentLabel(updated)} has been marked as completed.`
         : `${appointmentLabel(updated)} was canceled.`;
+
     createNotifications([...recipients], {
       appointmentId: id,
       title,
       message,
-      type: approved ? "approved" : completed ? "completed" : "cancelled"
+      type: approved
+        ? "approved"
+        : completed
+          ? "completed"
+          : "cancelled",
     });
   }
+
+  return updated;
 }
 
 // DELETE /api/appointments/:id
