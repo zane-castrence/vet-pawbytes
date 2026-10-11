@@ -1,5 +1,12 @@
 import { Link, NavLink } from "react-router-dom";
-import { CalendarDays, LayoutDashboard, LayoutGrid, PawPrint, Plus } from "lucide-react";
+import {
+  BarChart3,
+  CalendarDays,
+  LayoutDashboard,
+  LayoutGrid,
+  PawPrint,
+  Plus,
+} from "lucide-react";
 import AccountMenu from "../AccountMenu";
 
 const CUSTOMER_LINKS = [
@@ -8,7 +15,14 @@ const CUSTOMER_LINKS = [
   { to: "/my-appointments", label: "My appointments", icon: CalendarDays },
 ];
 
-const STAFF_LINKS = [{ to: "/admin", label: "Dashboard", icon: LayoutDashboard }];
+const STAFF_LINKS = [
+  { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
+];
+
+const ADMIN_LINKS = [
+  ...STAFF_LINKS,
+  { to: "/admin/stats", label: "Stats", icon: BarChart3 },
+];
 
 const FOCUS =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A3BD9]";
@@ -22,7 +36,13 @@ const linkClass = ({ isActive }) =>
 
 export default function SidebarNav({ user, onLogout }) {
   const isCustomer = user?.role === "customer";
-  const links = isCustomer ? CUSTOMER_LINKS : STAFF_LINKS;
+  const isAdmin = user?.role === "admin";
+
+  const links = isCustomer
+    ? CUSTOMER_LINKS
+    : isAdmin
+      ? ADMIN_LINKS
+      : STAFF_LINKS;
 
   return (
     <div className="flex h-full w-[260px] flex-col p-3 font-figtree">
@@ -44,7 +64,12 @@ export default function SidebarNav({ user, onLogout }) {
 
       <nav className="flex flex-col gap-1">
         {links.map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} className={linkClass}>
+          <NavLink
+            key={to}
+            to={to}
+            end={to === "/admin"}
+            className={linkClass}
+          >
             <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
             {label}
           </NavLink>
