@@ -87,6 +87,22 @@ const credits = [
         sourceUrl: "https://21st.dev/@arunjdass/components/dashboard-sidebar",
         usedIn: "Sidebar and account menu (layout inspiration)",
     },
+    {
+        name: "Animated Banner",
+        author: "dqnamo",
+        authorUrl: "https://21st.dev/@dqnamo",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@dqnamo/components/animated-banner",
+        usedIn: "Services page greeting banner (layout inspiration)",
+    },
+    {
+        name: "Appointment Card",
+        author: "Ravi Katiyar",
+        authorUrl: "https://21st.dev/@ravikatiyar162",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@ravikatiyar162/components/card-23",
+        usedIn: "Upcoming visit cards on the Services page (layout inspiration)",
+    },
     // add more entries here as you bring in components
 ];
 
