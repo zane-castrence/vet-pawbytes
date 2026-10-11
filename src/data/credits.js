@@ -103,6 +103,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@ravikatiyar162/components/card-23",
         usedIn: "Upcoming visit cards on the Services page (layout inspiration)",
     },
+    {
+        name: "Project Data Table",
+        author: "Ravi Katiyar",
+        authorUrl: "https://21st.dev/@ravikatiyar162",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@ravikatiyar162/components/project-data-table",
+        usedIn: "My appointments and admin dashboard tables (layout inspiration)",
+    },
     // add more entries here as you bring in components
 ];
 
