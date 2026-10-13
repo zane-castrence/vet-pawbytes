@@ -11,6 +11,7 @@ import {
   PAGE_CLASS, H2_CLASS, INPUT_CLASS, ALERT_ERROR, ALERT_SUCCESS
 } from "../components/ui/app-controls";
 import { formatDate } from "../utils/format";
+import { formatTimeRange } from "../utils/time";
 import {
   addClinicCatalogItem, createAppointment, createTeamAccount, deleteAppointment, deleteCustomer,
   getAllAppointments, getClinicCatalog, getClinicTeamAvailability, getCustomers,
@@ -150,7 +151,7 @@ export default function AdminDashboard() {
     { key: "vet", label: "Veterinarian" },
     {
       key: "when", label: "Date & time",
-      render: (a) => (<><p className="font-semibold">{formatDate(a.date)}</p><p className="text-[13px] text-[#4B5563]">{a.time}</p></>)
+      render: (a) => (<><p className="font-semibold">{formatDate(a.date)}</p><p className="text-[13px] text-[#4B5563]">{formatTimeRange(a)}</p></>)
     },
     { key: "status", label: "Status", render: (a) => <StatusBadge status={a.status} /> },
     {
@@ -309,7 +310,7 @@ export default function AdminDashboard() {
                         <dl className="mt-4 grid grid-cols-3 gap-3 text-[14px]">
                           <div><dt className="text-[12px] font-semibold uppercase tracking-[0.4px] text-[#4B5563]">Service</dt><dd className="font-semibold">{a.service}</dd></div>
                           <div><dt className="text-[12px] font-semibold uppercase tracking-[0.4px] text-[#4B5563]">Vet</dt><dd className="font-semibold">{a.vet}</dd></div>
-                          <div><dt className="text-[12px] font-semibold uppercase tracking-[0.4px] text-[#4B5563]">Requested</dt><dd className="font-semibold">{formatDate(a.date)}, {a.time}</dd></div>
+                          <div><dt className="text-[12px] font-semibold uppercase tracking-[0.4px] text-[#4B5563]">Requested</dt><dd className="font-semibold">{formatDate(a.date)}, {formatTimeRange(a)}</dd></div>
                         </dl>
                         {a.notes && <p className="mt-4 rounded-[8px] bg-[#F9FAFB] px-3 py-2 text-[14px] text-[#4B5563]"><span className="font-semibold text-[#1F2937]">Notes: </span>{a.notes}</p>}
                         <div className="mt-5 flex flex-wrap gap-2">
