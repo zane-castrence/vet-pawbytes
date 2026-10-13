@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Clock, Stethoscope } from "lucide-react";
+import { formatTimeRange } from "../../utils/time";
 
 // flat colors for the photo placeholder and footer, text stays dark for contrast
 const BANDS = ["#F06AA6", "#D9F25C", "#8CC8FF", "#7FD1B0"];
@@ -10,7 +11,7 @@ const STATUS = {
 };
 
 export default function AppointmentCard({ appointment, index = 0 }) {
-  const { petName, species, service, date, time, vet, status, petPhoto } = appointment;
+  const { petName, species, service, date, vet, status, petPhoto } = appointment;
   const [brokenUrl, setBrokenUrl] = useState("");
   const color = BANDS[index % BANDS.length];
   const showPhoto = !!petPhoto && brokenUrl !== petPhoto;
@@ -57,7 +58,7 @@ export default function AppointmentCard({ appointment, index = 0 }) {
       <footer className="flex items-center justify-between gap-3 border-t border-[#D8DEE3] px-5 py-3 text-[13px] font-semibold text-[#1F2937]">
         <span className="flex items-center gap-1.5">
           <Clock className="h-4 w-4 text-[#2A3BD9]" strokeWidth={1.75} />
-          {time}
+          {formatTimeRange(appointment)}
         </span>
         <span className="flex min-w-0 items-center gap-1.5">
           <Stethoscope className="h-4 w-4 shrink-0 text-[#2A3BD9]" strokeWidth={1.75} />
