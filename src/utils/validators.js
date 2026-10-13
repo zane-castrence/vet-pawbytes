@@ -1,3 +1,6 @@
+import { getClinicSettings } from "../services/clinicSettings";
+import { MAX_MINUTES, label12, toMinutes } from "./time";
+
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const today = () => {
   const date = new Date();
@@ -28,8 +31,11 @@ export function validateAppointment(f) {
   if (!f.vet) e.vet = "Choose a veterinarian.";
   if (!f.date) e.date = "Pick a date.";
   else if (needsFutureSlot && f.date < today()) e.date = "Pending and scheduled appointments can't be in the past.";
+  const { open, close } = getClinicSettings();
   if (!f.time) e.time = "Pick a time.";
-  else if (f.time < "08:00" || f.time > "17:00") e.time = "Clinic hours are 8:00 AM to 5:00 PM.";
+  else if (f.time < open || f.time >= close) e.time = `Clinic hours are ${label12(open)} to ${label12(close)}.`;
+  else if (f.endTime && !(f.endTime > f.time && f.endTime <= close)) e.time = `Pick an end time after the start, no later than ${label12(close)}.`;
+  else if (f.endTime && toMinutes(f.endTime) - toMinutes(f.time) > MAX_MINUTES) e.time = "An appointment can be 4 hours at most.";
   else if (needsFutureSlot && f.date === today() && f.time <= currentTime()) e.time = "Choose a time later today.";
   if (f.notes.length > 200) e.notes = "Notes must be 200 characters or fewer.";
   return e;
