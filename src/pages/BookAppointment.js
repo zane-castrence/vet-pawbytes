@@ -1,16 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { createAppointment, createPet, getClinicCatalog, getPets, getUnavailableTimes } from "../services/api";
+import { createAppointment, createPet, getClinicCatalog, getPets } from "../services/api";
 import { validateAppointment } from "../utils/validators";
+import { toMinutes } from "../utils/time";
 import BookingModal from "../components/BookingModal";
 import BrowseServices from "./BrowseServices";
-
-// 8:00 AM to 5:00 PM in 30-minute slots
-const TIMES = Array.from({ length: 19 }, (_, i) => {
-  const m = 8 * 60 + i * 30;
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-});
 
 export default function BookAppointment() {
   const { user } = useAuth();
@@ -19,10 +14,9 @@ export default function BookAppointment() {
   const [pets, setPets] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [catalog, setCatalog] = useState({ services: [], vets: [] });
-  const [taken, setTaken] = useState([]);
   const [form, setForm] = useState({
     ownerName: user.name, petId: "", petName: "", species: "",
-    service: params.get("service") || "", vet: "", date: "", time: "", notes: "", status: "Pending"
+    service: params.get("service") || "", vet: "", date: "", time: "", endTime: "", notes: "", status: "Pending"
   });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
@@ -35,21 +29,18 @@ export default function BookAppointment() {
       .finally(() => setLoaded(true));
   }, [user.id]);
 
-  // Re-check unavailable times whenever the vet or date changes
-  useEffect(() => {
-    if (!form.date || !form.vet) { setTaken([]); return; }
-    getUnavailableTimes(form.date, form.vet).then(setTaken).catch(() => setTaken([]));
-  }, [form.date, form.vet]);
-
   const change = (e) => {
     const { name, value } = e.target;
     if (name === "petId") {
       const pet = pets.find((p) => p.id === value);
-      setForm({ ...form, petId: value, petName: pet?.name || "", species: pet?.species || "" });
+      setForm((f) => ({ ...f, petId: value, petName: pet?.name || "", species: pet?.species || "" }));
     } else {
-      setForm({ ...form, [name]: value, ...(name === "date" || name === "vet" ? { time: "" } : {}) });
+      setForm((f) => ({ ...f, [name]: value }));
     }
   };
+
+  // partial updates from the date picker and time slider
+  const patch = (fields) => setForm((f) => ({ ...f, ...fields }));
 
   // saves a new pet from step 1 and selects it (throws on invalid input)
   const addPet = async (data) => {
@@ -67,7 +58,8 @@ export default function BookAppointment() {
     setSaving(true);
     setServerError("");
     try {
-      const appointment = await createAppointment(user.id, form, { requirePetProfile: true });
+      const duration = toMinutes(form.endTime) - toMinutes(form.time);
+      const appointment = await createAppointment(user.id, { ...form, duration }, { requirePetProfile: true });
       navigate("/confirmation", { state: { appointment } });
     } catch (err) {
       setServerError(err.message);
@@ -85,13 +77,12 @@ export default function BookAppointment() {
         pets={pets}
         services={catalog.services}
         vets={catalog.vets}
-        times={TIMES}
-        taken={taken}
         form={form}
         errors={errors}
         serverError={serverError}
         saving={saving}
         onChange={change}
+        onPatch={patch}
         onAddPet={addPet}
         onSubmit={submit}
         onClose={() => navigate("/services")}
