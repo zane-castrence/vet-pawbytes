@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import StatusBadge from "../components/StatusBadge";
 import { Card, buttonClass, PAGE_CLASS } from "../components/ui/app-controls";
 import { formatDate } from "../utils/format";
+import { formatTimeRange } from "../utils/time";
 
 export default function BookingConfirmation() {
   const { state } = useLocation();
@@ -13,7 +14,7 @@ export default function BookingConfirmation() {
     ["Pet", `${a.petName}${a.species ? ` (${a.species})` : ""}`],
     ["Service", a.service],
     ["Veterinarian", a.vet],
-    ["When", `${formatDate(a.date)} at ${a.time}`],
+    ["When", `${formatDate(a.date)}, ${formatTimeRange(a)}`],
     ...(a.notes ? [["Notes", a.notes]] : []),
   ];
 
