@@ -7,6 +7,7 @@ import Alert from "../components/Alert";
 import DataTable from "../components/ui/data-table";
 import { Button, Segmented, PageHeader, buttonClass, PAGE_CLASS, ALERT_ERROR, ALERT_SUCCESS } from "../components/ui/app-controls";
 import { formatDate } from "../utils/format";
+import { formatTimeRange } from "../utils/time";
 
 const FILTERS = ["All", "Pending", "Scheduled", "Completed", "Cancelled"];
 
@@ -63,7 +64,7 @@ export default function MyAppointments() {
       render: (a) => (
         <>
           <p className="font-semibold">{formatDate(a.date)}</p>
-          <p className="text-[13px] text-[#4B5563]">{a.time}</p>
+          <p className="text-[13px] text-[#4B5563]">{formatTimeRange(a)}</p>
         </>
       ),
     },
