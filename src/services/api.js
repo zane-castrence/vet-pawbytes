@@ -379,6 +379,29 @@ export async function getUnavailableTimes(date, vet, ignoreId) {
     .map((a) => a.time);
 }
 
+// Time ranges ("HH:mm"). Appointments saved before time ranges existed only have a start; they count as 30 minutes.
+const toMin = (t) => {
+  const [h, m] = String(t || "").split(":").map(Number);
+  return h * 60 + m;
+};
+const toHHMM = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+const endMin = (a) => (a.endTime ? toMin(a.endTime) : toMin(a.time) + (Number(a.duration) || 30));
+const overlaps = (a, b) => toMin(a.time) < endMin(b) && toMin(b.time) < endMin(a);
+
+// GET /api/appointments/busy?date=...&vet=...  ->  [{ start: "09:00", end: "10:30" }]
+export async function getBusyRanges(date, vet, ignoreId) {
+  await wait(100);
+  return read("appointments", [])
+    .filter((a) =>
+      ["Pending", "Scheduled"].includes(a.status) &&
+      a.vet === vet &&
+      a.date === date &&
+      a.id !== ignoreId
+    )
+    .map((a) => ({ start: a.time, end: toHHMM(endMin(a)) }))
+    .sort((x, y) => toMin(x.start) - toMin(y.start));
+}
+
 const isTaken = (list, data, ignoreId) =>
   ["Pending", "Scheduled"].includes(data.status) &&
   list.some((a) =>
@@ -386,7 +409,7 @@ const isTaken = (list, data, ignoreId) =>
     ["Pending", "Scheduled"].includes(a.status) &&
     a.vet === data.vet &&
     a.date === data.date &&
-    a.time === data.time
+    overlaps(a, data)
   );
 
 // POST /api/appointments
