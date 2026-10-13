@@ -119,6 +119,22 @@ const credits = [
         sourceUrl: "https://21st.dev/@kedhareswer/components/contribution-skyline",
         usedIn: "Admin Stats page activity visualization",
     },
+    {
+        name: "Apple Calendar Picker",
+        author: "Muhammad Asif",
+        authorUrl: "https://21st.dev/@pulseawan",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@pulseawan/components/apple-calendar-picker",
+        usedIn: "Booking date picker (customer booking and admin appointment form)",
+    },
+    {
+        name: "Price Range Slider",
+        author: "ShadcnSpace",
+        authorUrl: "https://21st.dev/@shadcnspace",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@shadcnspace/components/slider-06",
+        usedIn: "Booking time range slider (start to end time)",
+    },
 ];
 
 export default credits;
