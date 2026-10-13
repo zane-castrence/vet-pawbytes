@@ -1,101 +1,93 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import ContributionSkyline from "../components/ui/contribution-skyline";
 import { getAllAppointments } from "../services/api";
-import {
-  ALERT_ERROR,
-  PAGE_CLASS,
-  PageHeader,
-} from "../components/ui/app-controls";
+import Alert from "../components/Alert";
+import ContributionSkyline, { buildGrid, dayMs } from "../components/ui/contribution-skyline";
+import { ALERT_ERROR, PAGE_CLASS, PageHeader } from "../components/ui/app-controls";
 
-const normalizeStatus = (appointment) =>
-  String(
-    appointment.status ||
-      appointment.state ||
-      appointment.progress ||
-      "",
-  )
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, "");
+const pad = (n) => String(n).padStart(2, "0");
+const localKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-const isCompleted = (appointment) =>
-  appointment.completed === true ||
-  appointment.isCompleted === true ||
-  [
-    "completed",
-    "complete",
-    "done",
-    "finished",
-    "completevisit",
-  ].includes(normalizeStatus(appointment));
+// Any stored date -> "YYYY-MM-DD", or "" when it can't be read
+const toDateKey = (value) => {
+  if (typeof value === "string") {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  }
+  if (value == null || value === "") return "";
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : localKey(d);
+};
 
+const isCompleted = (a) => String(a?.status || "").trim().toLowerCase() === "completed";
+
+// Admin only (the route is already restricted in App.js)
 export default function AdminStats() {
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dates, setDates] = useState(null); // null = still loading
+  const [unreadable, setUnreadable] = useState(0);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const result = await getAllAppointments();
-
-      setAppointments(Array.isArray(result) ? result : []);
+      const all = await getAllAppointments();
+      const done = (Array.isArray(all) ? all : []).filter(isCompleted);
+      const keys = done.map((a) => toDateKey(a.date)).filter(Boolean).sort();
+      // keep the same array when nothing changed so the graph isn't rebuilt on every refresh
+      setDates((prev) => (prev && prev.join() === keys.join() ? prev : keys));
+      setUnreadable(done.length - keys.length);
       setError("");
     } catch {
       setError("Couldn't load completed visit statistics.");
-    } finally {
-      setLoading(false);
+      setDates((prev) => prev ?? []);
     }
   }, []);
 
   useEffect(() => {
     load();
-
-    const interval = window.setInterval(load, 3000);
-
-    const handleFocus = () => load();
-
-    window.addEventListener("focus", handleFocus);
-
+    const timer = setInterval(load, 15000);
+    window.addEventListener("focus", load);
     return () => {
-      window.clearInterval(interval);
-      window.removeEventListener("focus", handleFocus);
+      clearInterval(timer);
+      window.removeEventListener("focus", load);
     };
   }, [load]);
 
-  const completedVisits = useMemo(
-    () =>
-      appointments
-        .filter(isCompleted)
-        .filter((appointment) => appointment.date)
-        .map((appointment) => ({
-          date: appointment.date,
-          count: 1,
-        })),
-    [appointments],
-  );
+  const data = useMemo(() => (dates || []).map((date) => ({ date, count: 1 })), [dates]);
+
+  // The year ends today (or on the latest completed visit if one is dated later)
+  const today = localKey(new Date());
+  const endDate = dates && dates.length && dates[dates.length - 1] > today ? dates[dates.length - 1] : today;
+
+  // Completed visits that fall before the one-year window
+  const older = useMemo(() => {
+    if (!data.length) return 0;
+    const shown = buildGrid(data, dayMs(endDate)).cells.reduce((sum, c) => sum + c.count, 0);
+    return data.length - shown;
+  }, [data, endDate]);
 
   return (
     <section className={PAGE_CLASS}>
-      <PageHeader
-        title="Stats"
-        subtitle="Track completed clinic visits across the last year."
-      />
+      <PageHeader title="Stats" subtitle="Completed clinic visits over the last year." />
 
-      {error && <p className={ALERT_ERROR}>{error}</p>}
+      <Alert className={ALERT_ERROR}>{error}</Alert>
 
-      {loading ? (
-        <p className="mt-6 text-[15px] text-[#4B5563]">
-          Loading statistics…
-        </p>
+      {dates === null ? (
+        <p className="text-[15px] text-[#4B5563]">Loading statistics…</p>
       ) : (
-        <div className="mt-6">
+        <>
           <ContributionSkyline
-            data={completedVisits}
-            title={`${completedVisits.length.toLocaleString()} completed visits in the last year`}
+            data={data}
+            endDate={endDate}
+            fullAt={8}
             unit="completed visit"
             unitPlural="completed visits"
           />
-        </div>
+          {(older > 0 || unreadable > 0) && (
+            <p className="mt-4 text-[13px] text-[#4B5563]">
+              {older > 0 && `${older} older completed ${older === 1 ? "visit is" : "visits are"} outside the one-year view. `}
+              {unreadable > 0 && `${unreadable} completed ${unreadable === 1 ? "visit has" : "visits have"} no readable date.`}
+            </p>
+          )}
+        </>
       )}
     </section>
   );
