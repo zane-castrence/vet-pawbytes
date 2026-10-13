@@ -1,596 +1,1312 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, Grid3X3 } from "lucide-react";
+import * as React from "react";
 
-const DAY_MS = 86400000;
+/**
+ * Contribution Skyline: a year of activity as a GitHub-style heat map that
+ * folds up into an isometric skyline, and back down again.
+ *
+ * One scene, not two charts. Every day is a box on a grid; the 2D view is that
+ * grid seen straight down, the 3D view is the same grid seen from the corner.
+ * Switching views swings one camera between the two while each week's bars
+ * rise (or settle) in a wave from the oldest week to the newest.
+ *
+ * Hover or tap a day for its count, arrow keys walk the grid, hover a legend
+ * swatch to isolate that level, and in 3D drag to orbit (double-click resets).
+ *
+ * Canvas + DOM, React is the only import. Pass `data` as `{ date, count }[]`;
+ * without it a seeded, believable year is generated so the demo is never empty.
+ *
+ * Converted from the 21st.dev "GitHub Contribution Graph 3D Heatmap" (see
+ * Credits). PawBytes changes: JS instead of TypeScript, design-system colors,
+ * radius and font, light theme only, and date handling that never throws.
+ */
 
-const COLORS = [
-  "#E5E7EB",
-  "#D1FAE5",
-  "#86EFAC",
-  "#22C55E",
-  "#15803D",
-];
+// ---------- pure helpers: dates, grid, stats, levels, camera, colour maths ----------
 
-const BORDER = "#D8DEE3";
-const MUTED = "#6B7280";
-const TEXT = "#1F2937";
+export const DAY_MS = 86400000;
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+export const clamp01 = (v) => (v > 0 ? (v < 1 ? v : 1) : 0);
+export const lerp = (a, b, t) => a + (b - a) * t;
+export const easeInOutCubic = (x) => {
+  const t = clamp01(x);
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+};
+export const easeOutCubic = (x) => 1 - Math.pow(1 - clamp01(x), 3);
+export const smoothstep = (a, b, x) => {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
 
-const parseDate = (value) => {
-  if (!value) return NaN;
+/** UTC midnight (ms) to "YYYY-MM-DD". */
+export const toKey = (ms) => new Date(ms).toISOString().slice(0, 10);
 
-  if (typeof value === "number") {
-    return Math.floor(value / DAY_MS) * DAY_MS;
+/**
+ * Any date-ish value to UTC midnight of its calendar day, or NaN when it can't
+ * be read. "YYYY-MM-DD" strings are read literally (no timezone drift), Date
+ * objects by their local day, numbers as UTC timestamps.
+ */
+export const dayMs = (v) => {
+  if (v == null) return NaN;
+  if (typeof v === "number") return Number.isFinite(v) ? Math.floor(v / DAY_MS) * DAY_MS : NaN;
+  if (typeof v === "string") {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+    if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3]);
+    v = new Date(v);
   }
-
-  if (typeof value === "string") {
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-
-    if (match) {
-      return Date.UTC(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3]),
-      );
-    }
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return NaN;
-
-  return Date.UTC(
-    parsed.getFullYear(),
-    parsed.getMonth(),
-    parsed.getDate(),
-  );
+  if (!(v instanceof Date) || Number.isNaN(v.getTime())) return NaN;
+  return Date.UTC(v.getFullYear(), v.getMonth(), v.getDate());
 };
 
-const toKey = (value) => {
-  const timestamp = parseDate(value);
-  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
-};
-
-const formatDate = (value, withYear = true) =>
-  new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    ...(withYear ? { year: "numeric" } : {}),
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
-
-const formatMonth = (value) =>
-  new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
-
-const getLevel = (count, max) => {
-  if (count <= 0) return 0;
-  if (!max) return 4;
-  if (count >= max * 0.75) return 4;
-  if (count >= max * 0.5) return 3;
-  if (count >= max * 0.25) return 2;
-  return 1;
-};
-
-const getEndDate = (data, endDate) => {
-  if (endDate) return toKey(endDate);
-
-  const validDates = data
-    .map((item) => parseDate(item.date))
-    .filter(Number.isFinite);
-
-  if (!validDates.length) return toKey(Date.now());
-
-  return toKey(Math.max(...validDates));
-};
-
-const buildGrid = (data, endDate) => {
-  const counts = new Map();
-
-  data.forEach((item) => {
-    const key = toKey(item.date);
-    const count = Number(item.count) || 0;
-
-    if (!key || count <= 0) return;
-
-    counts.set(key, (counts.get(key) || 0) + count);
-  });
-
-  const end = parseDate(endDate);
-  const start = end - 364 * DAY_MS;
-  const cells = [];
-
-  for (let timestamp = start; timestamp <= end; timestamp += DAY_MS) {
-    const date = toKey(timestamp);
-
-    cells.push({
-      date,
-      count: counts.get(date) || 0,
-      week: Math.floor(cells.length / 7),
-      day: cells.length % 7,
-    });
-  }
-
-  const max = Math.max(...cells.map((cell) => cell.count), 0);
-
-  cells.forEach((cell) => {
-    cell.level = getLevel(cell.count, max);
-  });
-
-  return {
-    cells,
-    weeks: Math.ceil(cells.length / 7),
-    max,
+/** mulberry32: small, fast, deterministic. */
+export const rng = (seed) => {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 };
 
-const getStreak = (cells, current = false) => {
-  if (!cells.length) {
-    return { days: 0, start: null, end: null };
+/** A believable year for demos (only used when no `data` is passed). */
+export const generateContributions = (endMs, seed = 7, days = 371) => {
+  const r = rng(seed);
+  const bursts = Array.from({ length: 4 }, () => ({ at: r(), width: 0.035 + r() * 0.07, gain: 0.6 + r() * 1.1 }));
+  const out = [];
+  let mood = 0.5;
+  for (let i = 0; i < days; i++) {
+    const ms = endMs - (days - 1 - i) * DAY_MS;
+    const x = i / Math.max(1, days - 1);
+    const dow = new Date(ms).getUTCDay();
+    const weekend = dow === 0 || dow === 6;
+    let heat = 0.2;
+    for (const b of bursts) heat += b.gain * Math.exp(-((x - b.at) ** 2) / (2 * b.width ** 2));
+    mood = mood * 0.85 + r() * 0.15;
+    heat *= 0.55 + mood * 0.9;
+    const pActive = Math.min(0.94, (weekend ? 0.22 : 0.5) + heat * 0.4);
+    let count = 0;
+    if (r() < pActive) count = 1 + Math.floor(-Math.log(1 - r()) * (1.2 + heat * 7) * (weekend ? 0.5 : 1));
+    if (r() < 0.01) count += 18 + Math.floor(r() * 24);
+    out.push({ date: toKey(ms), count });
   }
-
-  if (current) {
-    let end = cells.length - 1;
-
-    while (end >= 0 && cells[end].count === 0) end -= 1;
-
-    if (end < 0) {
-      return { days: 0, start: null, end: null };
-    }
-
-    let start = end;
-
-    while (start >= 0 && cells[start].count > 0) start -= 1;
-
-    return {
-      days: end - start,
-      start: cells[start + 1].date,
-      end: cells[end].date,
-    };
-  }
-
-  let longest = { days: 0, start: null, end: null };
-  let start = null;
-  let days = 0;
-
-  cells.forEach((cell) => {
-    if (cell.count > 0) {
-      if (days === 0) start = cell.date;
-
-      days += 1;
-
-      if (days > longest.days) {
-        longest = {
-          days,
-          start,
-          end: cell.date,
-        };
-      }
-    } else {
-      days = 0;
-      start = null;
-    }
-  });
-
-  return longest;
+  return out;
 };
 
-function Stat({ label, value, unit, sub }) {
+/** 0 for an empty day, else 1-4 by quarters of `busy`. Anything at or past `busy` is 4. */
+export const levelOf = (count, busy) =>
+  count <= 0 ? 0 : busy <= 0 ? 4 : 1 + Math.min(3, Math.floor((count / busy) * 4));
+
+/**
+ * The grid: columns are weeks, rows are weekdays (row 0 = `weekStart`). It ends
+ * on `endMs` and starts on the week containing the day one year earlier.
+ * Levels 1-4 split the non-zero days by their share of a busy day (the 95th
+ * percentile), so one freak day can't wash every other day out to level 1.
+ */
+export const buildGrid = (data, endMs, weekStart = 0, fullAt = 0) => {
+  const counts = new Map();
+  for (const d of data) {
+    if (!d) continue;
+    const ms = dayMs(d.date);
+    const c = Number(d.count);
+    if (!Number.isFinite(ms) || !Number.isFinite(c) || !(c > 0)) continue;
+    const k = toKey(ms);
+    counts.set(k, (counts.get(k) ?? 0) + c);
+  }
+  let start = endMs - 364 * DAY_MS;
+  start -= ((new Date(start).getUTCDay() - weekStart + 7) % 7) * DAY_MS;
+  const cells = [];
+  for (let ms = start, i = 0; ms <= endMs; ms += DAY_MS, i++) {
+    const date = toKey(ms);
+    cells.push({ date, count: counts.get(date) ?? 0, level: 0, week: Math.floor(i / 7), day: i % 7 });
+  }
+  const nz = cells.map((c) => c.count).filter((c) => c > 0).sort((a, b) => a - b);
+  // fullAt > 0: a fixed scale, so that many per day is the darkest level and small counts stay light
+  const busy = fullAt > 0 ? fullAt : nz.length ? nz[Math.floor(0.95 * (nz.length - 1))] : 0;
+  for (const c of cells) c.level = levelOf(c.count, busy);
+  return { cells, weeks: cells.length ? cells[cells.length - 1].week + 1 : 0, max: Math.max(fullAt > 0 ? fullAt : 0, nz.length ? nz[nz.length - 1] : 0) };
+};
+
+/** Total, busiest day, longest run, and the run that reaches today (or yesterday: today isn't over). */
+export const computeStats = (cells) => {
+  let total = 0;
+  let best = 0;
+  let bestDate = null;
+  let run = 0;
+  let runStart = null;
+  let longest = { days: 0, start: null, end: null };
+  for (const c of cells) {
+    total += c.count;
+    if (c.count > best) {
+      best = c.count;
+      bestDate = c.date;
+    }
+    if (c.count > 0) {
+      if (run === 0) runStart = c.date;
+      run++;
+      if (run > longest.days) longest = { days: run, start: runStart, end: c.date };
+    } else run = 0;
+  }
+  let j = cells.length - 1;
+  if (j >= 0 && cells[j].count === 0) j--;
+  const endAt = j;
+  while (j >= 0 && cells[j].count > 0) j--;
+  const days = endAt - j;
+  const current = days > 0 ? { days, start: cells[j + 1].date, end: cells[endAt].date } : { days: 0, start: null, end: null };
+  return {
+    total,
+    first: cells.length ? cells[0].date : null,
+    last: cells.length ? cells[cells.length - 1].date : null,
+    busiest: { count: best, date: bestDate },
+    longest,
+    current,
+  };
+};
+
+/** A label on each week whose first day starts a new month; a cramped first label is dropped. */
+export const monthLabels = (cells, weeks, locale = "en-US") => {
+  const fmt = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
+  const out = [];
+  let prev = -1;
+  for (let w = 0; w < weeks; w++) {
+    const c = cells[w * 7];
+    if (!c) break;
+    const m = +c.date.slice(5, 7);
+    if (m !== prev) out.push({ week: w, label: fmt.format(dayMs(c.date)) });
+    prev = m;
+  }
+  if (out.length > 1 && out[1].week - out[0].week < 3) out.shift();
+  return out;
+};
+
+/** Box height in grid units. Empty days are thin slabs; the busiest day is about 7.6 cells tall. */
+export const barHeight = (count, max, scale = 1) =>
+  count > 0 && max > 0 ? 0.4 + Math.pow(count / max, 0.85) * 7.2 * scale : 0.2;
+
+/** Share of the morph each bar spends waiting: the wave sweeps oldest week to newest. */
+export const WAVE = 0.42;
+
+/** 0 to 1 as a bar rises during the morph. Every bar is flat at t=0 and fully up at t=1. */
+export const riseAt = (t, week, weeks, day) => {
+  const d = (weeks > 1 ? week / (weeks - 1) : 0) * 0.36 + (day / 6) * 0.06;
+  return easeOutCubic((t - d) / (1 - WAVE));
+};
+
+export const YAW_3D = Math.PI / 4;
+export const ELEV_3D = (34 * Math.PI) / 180;
+export const YAW_RANGE = [(8 * Math.PI) / 180, (82 * Math.PI) / 180];
+export const ELEV_RANGE = [(18 * Math.PI) / 180, (62 * Math.PI) / 180];
+
+/**
+ * e=0 looks straight down (yaw 0, elevation 90deg): x across, y down, height
+ * invisible, a plain heat map. e=1 is the isometric corner view. Orbit offsets
+ * only apply in proportion to e, so the flat view never tilts.
+ */
+export const camera = (e, dYaw = 0, dElev = 0) => {
+  const yaw = Math.min(YAW_RANGE[1], Math.max(0, lerp(0, YAW_3D + dYaw, e)));
+  const elev = lerp(Math.PI / 2, Math.min(ELEV_RANGE[1], Math.max(ELEV_RANGE[0], ELEV_3D + dElev)), e);
+  return { cs: Math.cos(yaw), sn: Math.sin(yaw), se: Math.sin(elev), ce: Math.cos(elev) };
+};
+
+/** World (x = week, y = weekday, z = up) to screen, before scale/offset. */
+export const project = (c, x, y, z) => [x * c.cs - y * c.sn, (x * c.sn + y * c.cs) * c.se - z * c.ce];
+
+/** Painter's depth for yaw in [0, 90deg]: larger is nearer the viewer, so draw ascending. */
+export const depthOf = (c, x, y) => x * c.sn + y * c.cs;
+
+export const mixRGB = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+export const luminance = (c) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+
+/** Four colours per theme, lightest activity to heaviest. PawBytes green ramp. */
+export const PALETTES = {
+  pawbytes: {
+    light: ["#D1FAE5", "#7FD1B0", "#059669", "#047857"],
+    dark: ["#D1FAE5", "#7FD1B0", "#059669", "#047857"],
+  },
+};
+
+export const resolvePalette = (p, dark) => {
+  const mode = dark ? "dark" : "light";
+  const base = PALETTES.pawbytes[mode];
+  let pick = base;
+  if (Array.isArray(p)) pick = p;
+  else if (p && typeof p === "object") pick = p[mode] || base;
+  else if (typeof p === "string" && PALETTES[p]) pick = PALETTES[p][mode];
+  return [0, 1, 2, 3].map((i) => pick[i] ?? pick[pick.length - 1] ?? base[i]);
+};
+
+// ---------- component ----------
+
+// PawBytes design-system colors (the original read shadcn CSS variables)
+const BG = "#FFFFFF";
+const FG = "#1F2937";
+const BORDER = "#D8DEE3";
+const MUTED = "#4B5563";
+const BRAND = "#2A3BD9";
+const FG_FALLBACK = [31, 41, 55];
+const BG_FALLBACK = [255, 255, 255];
+
+// Any CSS colour to sRGB, by letting the browser paint it.
+let probe = null;
+const toRGB = (color, fallback) => {
+  if (!probe) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    probe = c.getContext("2d", { willReadFrequently: true });
+  }
+  if (!probe) return fallback;
+  probe.clearRect(0, 0, 1, 1);
+  probe.fillStyle = "rgba(0,0,0,0)";
+  probe.fillStyle = color;
+  probe.fillRect(0, 0, 1, 1);
+  const d = probe.getImageData(0, 0, 1, 1).data;
+  if (d[3] < 8) return fallback;
+  return [d[0], d[1], d[2]];
+};
+
+const rgbString = (r, g, b) => "rgb(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(b) + ")";
+
+const pointInQuad = (p, o, x, y) => {
+  let sign = 0;
+  for (let k = 0; k < 4; k++) {
+    const ax = p[o + k * 2];
+    const ay = p[o + k * 2 + 1];
+    const bx = p[o + ((k + 1) % 4) * 2];
+    const by = p[o + ((k + 1) % 4) * 2 + 1];
+    const cross = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+    if (Math.abs(cross) < 1e-9) continue;
+    const s = cross > 0 ? 1 : -1;
+    if (sign === 0) sign = s;
+    else if (s !== sign) return false;
+  }
+  return sign !== 0;
+};
+
+const quadPath = (ctx, p, o, r) => {
+  if (r < 0.3) {
+    ctx.moveTo(p[o], p[o + 1]);
+    ctx.lineTo(p[o + 2], p[o + 3]);
+    ctx.lineTo(p[o + 4], p[o + 5]);
+    ctx.lineTo(p[o + 6], p[o + 7]);
+    ctx.closePath();
+    return;
+  }
+  ctx.moveTo((p[o + 6] + p[o]) / 2, (p[o + 7] + p[o + 1]) / 2);
+  for (let k = 0; k < 4; k++) {
+    const b = (k + 1) % 4;
+    ctx.arcTo(p[o + k * 2], p[o + k * 2 + 1], p[o + b * 2], p[o + b * 2 + 1], r);
+  }
+  ctx.closePath();
+};
+
+const GridIcon = () => (
+  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" style={{ maxWidth: "none" }}>
+    <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" fill="currentColor" />
+    <rect x="9" y="1.5" width="5.5" height="5.5" rx="1" fill="currentColor" />
+    <rect x="1.5" y="9" width="5.5" height="5.5" rx="1" fill="currentColor" />
+    <rect x="9" y="9" width="5.5" height="5.5" rx="1" fill="currentColor" />
+  </svg>
+);
+
+const CubeIcon = () => (
+  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" style={{ maxWidth: "none" }}>
+    <path d="M8 1.2 14.2 4.6v6.8L8 14.8 1.8 11.4V4.6Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M1.8 4.6 8 8l6.2-3.4M8 8v6.8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+  </svg>
+);
+
+function Stat({ label, value, unit, sub, accent, size, align }) {
+  if (align === "stack") {
+    return (
+      <div className="min-w-0">
+        <div className="text-[13px] leading-tight" style={{ color: MUTED }}>
+          {label}
+        </div>
+        <div className="mt-1 flex items-baseline gap-1.5">
+          <span
+            className="font-semibold tabular-nums transition-colors duration-500 motion-reduce:transition-none"
+            style={{ color: accent, fontSize: size, lineHeight: 1, letterSpacing: "-0.02em" }}
+          >
+            {value}
+          </span>
+          <span className="text-[14px]">{unit}</span>
+        </div>
+        <div className="mt-0.5 truncate text-[12px]" style={{ color: MUTED }}>
+          {sub}
+        </div>
+      </div>
+    );
+  }
   return (
-    <div className="min-w-0">
-      <div className="text-[13px] leading-tight" style={{ color: MUTED }}>
-        {label}
+    <div className="grid grid-cols-[auto_auto] items-end gap-x-2" style={{ justifyContent: align }}>
+      {align === "end" ? (
+        <>
+          <div className="text-right text-[13px] leading-tight" style={{ color: MUTED }}>
+            {label}
+          </div>
+          <div />
+        </>
+      ) : (
+        <div className="col-span-2 text-[13px] leading-tight" style={{ color: MUTED }}>
+          {label}
+        </div>
+      )}
+      <div
+        className="text-right font-semibold tabular-nums transition-colors duration-500 motion-reduce:transition-none"
+        style={{ color: accent, fontSize: size, lineHeight: 0.95, letterSpacing: "-0.02em" }}
+      >
+        {value}
       </div>
-
-      <div className="mt-1 flex items-baseline gap-2">
-        <span
-          className="font-semibold tabular-nums"
-          style={{
-            color: "#16A34A",
-            fontSize: 34,
-            lineHeight: 1,
-            letterSpacing: "-0.05em",
-          }}
-        >
-          {value}
-        </span>
-
-        <span className="text-[14px]" style={{ color: TEXT }}>
-          {unit}
-        </span>
-      </div>
-
-      <div className="mt-1 truncate text-[12px]" style={{ color: MUTED }}>
-        {sub}
+      <div className="pb-[0.15em] leading-tight">
+        <div className="text-[15px]">{unit}</div>
+        <div className="whitespace-nowrap text-[13px]" style={{ color: MUTED }}>
+          {sub}
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default function ContributionSkyline({
-  data = [],
-  endDate,
-  title,
-  unit = "completed visit",
-  unitPlural = "completed visits",
+  data, // [{ date: "YYYY-MM-DD", count }]; repeated dates add up. Omit for a generated sample year.
+  endDate, // last day shown. Defaults to the latest date in `data`, or today.
+  view: viewProp, // controlled view: "2d" | "3d"
+  defaultView = "3d",
+  onViewChange,
+  palette = "pawbytes", // a preset name, four colours, or { light, dark }
+  title, // heading. Defaults to "{total} {unit} in the last year".
+  unit = "contribution",
+  unitPlural,
+  heightScale = 1, // multiplies bar heights in 3D
+  duration = 1300, // morph length, ms
+  weekStart = 0, // 0 = Sunday on the top row, 1 = Monday
+  fullAt = 0, // fixed scale: this many per day is the darkest shade and tallest bar. 0 = relative to the busiest days
+  orbit = true, // drag to orbit in 3D
+  showStats = true,
+  showLegend = true,
+  showToggle = true,
+  footer, // replaces the hint under the chart; null renders none
+  locale = "en-US",
+  seed = 7, // seed for the generated sample year
+  onCellClick,
   className = "",
 }) {
-  const stageRef = useRef(null);
-  const dragRef = useRef(null);
+  const endKey = endDate == null ? NaN : dayMs(endDate);
+  const model = React.useMemo(() => {
+    const dates = (data ?? []).map((d) => dayMs(d && d.date)).filter(Number.isFinite);
+    const end = Number.isFinite(endKey) ? endKey : dates.length ? Math.max(...dates) : dayMs(new Date());
+    const days = data ?? generateContributions(end, seed);
+    const grid = buildGrid(days, end, weekStart, fullAt);
+    return { ...grid, stats: computeStats(grid.cells), months: monthLabels(grid.cells, grid.weeks, locale) };
+  }, [data, endKey, seed, weekStart, fullAt, locale]);
 
-  const [view, setView] = useState("3d");
-  const [width, setWidth] = useState(0);
-  const [activeLevel, setActiveLevel] = useState(-1);
-  const [selected, setSelected] = useState(null);
-  const [orbit, setOrbit] = useState({
-    yaw: -35,
-    pitch: 58,
+  const [innerView, setInnerView] = React.useState(defaultView);
+  const view = viewProp ?? innerView;
+  const setView = (v) => {
+    if (viewProp === undefined) setInnerView(v);
+    if (onViewChange) onViewChange(v);
+  };
+
+  const [theme, setTheme] = React.useState(() => {
+    const p = resolvePalette(palette, false);
+    return { dark: false, swatches: ["#E5E7EB", ...p], accent: p[3] };
   });
+  const [width, setWidth] = React.useState(0);
+  const [active, setActive] = React.useState(-1);
+  const [legendLevel, setLegendLevel] = React.useState(-1);
+  const [announce, setAnnounce] = React.useState("");
 
-  const resolvedEndDate = useMemo(
-    () => getEndDate(data, endDate),
-    [data, endDate],
-  );
+  const rootRef = React.useRef(null);
+  const stageRef = React.useRef(null);
+  const canvasRef = React.useRef(null);
+  const tipRef = React.useRef(null);
+  const engine = React.useRef(null);
 
-  const model = useMemo(
-    () => {
-      const grid = buildGrid(data, resolvedEndDate);
-      const total = grid.cells.reduce((sum, cell) => sum + cell.count, 0);
-      const busiest = grid.cells.reduce(
-        (best, cell) => (cell.count > best.count ? cell : best),
-        { count: 0, date: null },
-      );
+  const plural = unitPlural ?? unit + "s";
+  const nf = React.useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const df = React.useMemo(() => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" }), [locale]);
+  const dfy = React.useMemo(() => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }), [locale]);
+  const dfl = React.useMemo(() => new Intl.DateTimeFormat(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }), [locale]);
+  const noun = (n) => (n === 1 ? unit : plural);
+  const describe = (i) => {
+    const c = model.cells[i];
+    if (!c) return "";
+    return (c.count ? nf.format(c.count) + " " + noun(c.count) : "No " + plural) + " on " + dfl.format(dayMs(c.date));
+  };
 
-      return {
-        ...grid,
-        total,
-        activeDays: grid.cells.filter((cell) => cell.count > 0).length,
-        busiest,
-        longest: getStreak(grid.cells),
-        current: getStreak(grid.cells, true),
-      };
-    },
-    [data, resolvedEndDate],
-  );
+  // Everything the render loop reads, refreshed every render so the loop never closes over stale props.
+  const cfg = React.useRef(null);
+  cfg.current = { model, duration, heightScale, orbit, palette, legendLevel, onCellClick, target: view === "3d" ? 1 : 0, setActive, setWidth, setTheme, setAnnounce, describe };
 
-  useEffect(() => {
+  React.useEffect(() => {
+    const root = rootRef.current;
     const stage = stageRef.current;
-    if (!stage) return undefined;
+    const canvas = canvasRef.current;
+    const tip = tipRef.current;
+    if (!root || !stage || !canvas || !tip) return undefined;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return undefined;
 
-    const resize = () => setWidth(stage.clientWidth);
+    const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reduced = reduceMq.matches;
 
-    resize();
+    // morph: t is linear time 0 (2D) to 1 (3D); the camera eases it, the bars wave it
+    let t = 0;
+    let target = 0;
+    let entered = false;
+    // orbit offsets, eased toward their goals
+    let yaw = 0;
+    let elev = 0;
+    let yawGoal = 0;
+    let elevGoal = 0;
+    // layout
+    let W = 0;
+    let H2 = 0;
+    let H3 = 0;
+    let Hmax = 0;
+    let lastH = -1;
+    let dpr = 1;
+    let gutter = 30;
+    let labelW = 30;
+    let font = "10px sans-serif";
+    // colours: [empty, l1, l2, l3, l4] x rgb, eased toward the goal
+    const col = new Float32Array(15);
+    const colGoal = new Float32Array(15);
+    let colReady = false;
+    let fg = FG_FALLBACK;
+    let bg = BG_FALLBACK;
+    let isDark = false;
+    // cells
+    let n = 0;
+    let weeks = 0;
+    let wk = new Float32Array(0);
+    let dy = new Float32Array(0);
+    let lv = new Uint8Array(0);
+    let hgt = new Float32Array(0);
+    let zs = new Float32Array(0);
+    let hover = new Float32Array(0);
+    let dim = new Float32Array(0);
+    let polys = new Float32Array(0);
+    let faces = new Uint8Array(0);
+    let order = [];
+    let months = [];
+    let weekdayRows = [];
+    // interaction
+    let hovered = -1;
+    let pinned = -1;
+    let activeIdx = -1;
+    let tipW = 0;
+    let raf = 0;
+    let last = 0;
 
-    const observer = new ResizeObserver(resize);
-    observer.observe(stage);
-
-    return () => observer.disconnect();
-  }, []);
-
-  const cellSize = width < 640 ? 9 : width < 900 ? 12 : 16;
-  const gap = width < 640 ? 2 : 3;
-  const stageHeight = view === "3d" ? 360 : 250;
-
-  const monthLabels = useMemo(() => {
-    const labels = [];
-    let previous = "";
-
-    model.cells.forEach((cell) => {
-      const month = formatMonth(cell.date);
-
-      if (month !== previous) {
-        labels.push({
-          month,
-          week: cell.week,
-        });
-
-        previous = month;
+    const load = () => {
+      const m = cfg.current.model;
+      n = m.cells.length;
+      weeks = m.weeks;
+      if (wk.length !== n) {
+        wk = new Float32Array(n);
+        dy = new Float32Array(n);
+        lv = new Uint8Array(n);
+        hgt = new Float32Array(n);
+        zs = new Float32Array(n);
+        hover = new Float32Array(n);
+        dim = new Float32Array(n);
+        polys = new Float32Array(n * 24);
+        faces = new Uint8Array(n);
+        order = Array.from({ length: n }, (_, i) => i);
       }
-    });
-
-    return labels;
-  }, [model.cells]);
-
-  const handlePointerDown = (event) => {
-    if (view !== "3d") return;
-
-    dragRef.current = {
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-      yaw: orbit.yaw,
-      pitch: orbit.pitch,
+      for (let i = 0; i < n; i++) {
+        const c = m.cells[i];
+        wk[i] = c.week;
+        dy[i] = c.day;
+        lv[i] = c.level;
+        hgt[i] = barHeight(c.count, m.max, cfg.current.heightScale);
+      }
+      months = m.months;
+      const wf = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+      weekdayRows = [];
+      for (let d = 0; d < 7 && d < n; d++) {
+        const dow = new Date(dayMs(m.cells[d].date)).getUTCDay();
+        if (dow === 1 || dow === 3 || dow === 5) weekdayRows.push({ day: d, label: wf.format(dayMs(m.cells[d].date)) });
+      }
+      if (hovered >= n) hovered = -1;
+      if (pinned >= n) pinned = -1;
     };
 
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  };
+    const retheme = () => {
+      const cs = getComputedStyle(root);
+      fg = toRGB(cs.color, FG_FALLBACK) || FG_FALLBACK;
+      const b = toRGB(cs.backgroundColor, null);
+      bg = b || (luminance(fg) > 0.5 ? [10, 10, 10] : BG_FALLBACK);
+      isDark = luminance(bg) < 0.45;
+      font = "400 10px " + (cs.fontFamily || "sans-serif");
+      const pal = resolvePalette(cfg.current.palette, isDark);
+      const empty = mixRGB(bg, fg, isDark ? 0.11 : 0.11);
+      const all = [empty, ...pal.map((c) => toRGB(c, FG_FALLBACK) || FG_FALLBACK)];
+      for (let k = 0; k < 5; k++) for (let ch = 0; ch < 3; ch++) colGoal[k * 3 + ch] = all[k][ch];
+      if (!colReady || reduced) {
+        col.set(colGoal);
+        colReady = true;
+      }
+      ctx.font = font;
+      labelW = Math.ceil(Math.max(20, ...weekdayRows.map((r) => ctx.measureText(r.label).width))) + 8;
+      const sw = all.map((c) => rgbString(c[0], c[1], c[2]));
+      cfg.current.setTheme((prev) =>
+        prev.dark === isDark && prev.swatches.join() === sw.join() ? prev : { dark: isDark, swatches: sw, accent: sw[4] },
+      );
+      kick();
+    };
 
-  const handlePointerMove = (event) => {
-    const drag = dragRef.current;
+    // Projected extent of the scene for camera e, with each bar at zOf(i).
+    const extent = (cam, e, full) => {
+      const w = lerp(0.78, 0.9, e);
+      const off = (1 - w) / 2;
+      let minx = Infinity;
+      let maxx = -Infinity;
+      let miny = Infinity;
+      let maxy = -Infinity;
+      const add = (x, y, z) => {
+        const p = project(cam, x, y, z);
+        if (p[0] < minx) minx = p[0];
+        if (p[0] > maxx) maxx = p[0];
+        if (p[1] < miny) miny = p[1];
+        if (p[1] > maxy) maxy = p[1];
+      };
+      for (let i = 0; i < n; i++) {
+        const x0 = wk[i] + off;
+        const y0 = dy[i] + off;
+        const z = full ? hgt[i] * e : zs[i];
+        add(x0, y0, z);
+        add(x0 + w, y0, z);
+        add(x0, y0 + w, z);
+        add(x0 + w, y0 + w, 0);
+        add(x0, y0 + w, 0);
+        add(x0 + w, y0, 0);
+      }
+      // room for the month labels that run along the front edge in 3D
+      add(0, 7 + 1.5 * e, 0);
+      add(weeks, 7 + 1.5 * e, 0);
+      return { minx, maxx, miny, maxy };
+    };
 
-    if (!drag || drag.pointerId !== event.pointerId || view !== "3d") {
-      return;
-    }
+    const relayout = () => {
+      const w = Math.round(stage.clientWidth);
+      if (!w || !n) return;
+      W = w;
+      // Narrow cards give the weekday names' column to the grid instead; rows get too tight to label.
+      gutter = W < 520 ? 0 : labelW;
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      const b2 = extent(camera(0), 0, true);
+      H2 = 20 + 4 + ((b2.maxy - b2.miny) / (b2.maxx - b2.minx)) * (W - gutter - 4);
+      const b3 = extent(camera(1), 1, true);
+      const natural = ((b3.maxy - b3.miny) / (b3.maxx - b3.minx)) * (W - 40) + 40;
+      H3 = Math.max(Math.min(natural, W * 0.72, 620), Math.min(natural, 240));
+      Hmax = Math.ceil(Math.max(H2, H3));
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(Hmax * dpr);
+      canvas.style.width = W + "px";
+      canvas.style.height = Hmax + "px";
+      lastH = -1;
+      cfg.current.setWidth(W);
+      draw();
+    };
 
-    setOrbit({
-      yaw: clamp(
-        drag.yaw + (event.clientX - drag.x) * 0.2,
-        -70,
-        -10,
-      ),
-      pitch: clamp(
-        drag.pitch - (event.clientY - drag.y) * 0.15,
-        40,
-        72,
-      ),
+    const draw = () => {
+      if (!W || !n) return;
+      const e = easeInOutCubic(t);
+      const cam = camera(e, yaw, elev);
+      const Hc = lerp(H2, H3, e);
+      if (Math.abs(Hc - lastH) > 0.2) {
+        stage.style.height = Hc.toFixed(1) + "px";
+        lastH = Hc;
+      }
+      for (let i = 0; i < n; i++) zs[i] = riseAt(t, wk[i], weeks, dy[i]) * hgt[i];
+      const b = extent(cam, e, false);
+      const pad = lerp(2, 20, e);
+      const left = pad + gutter * (1 - e);
+      const top = pad + 20 * (1 - e);
+      const aw = W - left - pad;
+      const ah = Hc - top - pad;
+      const bw = Math.max(1e-6, b.maxx - b.minx);
+      const bh = Math.max(1e-6, b.maxy - b.miny);
+      const s = Math.min(aw / bw, ah / bh);
+      const ox = left + (aw - bw * s) / 2 - b.minx * s;
+      const oy = top + (ah - bh * s) / 2 - b.miny * s;
+      const { cs, sn, se, ce } = cam;
+      const px = (x, y) => ox + (x * cs - y * sn) * s;
+      const py = (x, y, z) => oy + ((x * sn + y * cs) * se - z * ce) * s;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, Hmax);
+
+      order.sort((a, c) => (wk[a] + 0.5) * sn + (dy[a] + 0.5) * cs - ((wk[c] + 0.5) * sn + (dy[c] + 0.5) * cs));
+
+      const w = lerp(0.78, 0.9, e);
+      const off = (1 - w) / 2;
+      const radius = lerp(0.17, 0.03, e) * s;
+      const outline = (1 - e) * 0.07;
+      const lift = 0.7 * e;
+      const ex = col[0];
+      const ey = col[1];
+      const ez = col[2];
+
+      for (let k = 0; k < n; k++) {
+        const i = order[k];
+        const x0 = wk[i] + off;
+        const y0 = dy[i] + off;
+        const x1 = x0 + w;
+        const y1 = y0 + w;
+        const z = zs[i] + hover[i] * lift;
+        const o = i * 24;
+        // top
+        polys[o] = px(x0, y0); polys[o + 1] = py(x0, y0, z);
+        polys[o + 2] = px(x1, y0); polys[o + 3] = py(x1, y0, z);
+        polys[o + 4] = px(x1, y1); polys[o + 5] = py(x1, y1, z);
+        polys[o + 6] = px(x0, y1); polys[o + 7] = py(x0, y1, z);
+        // +y face (left on screen)
+        polys[o + 8] = px(x0, y1); polys[o + 9] = py(x0, y1, 0);
+        polys[o + 10] = px(x1, y1); polys[o + 11] = py(x1, y1, 0);
+        polys[o + 12] = polys[o + 4]; polys[o + 13] = polys[o + 5];
+        polys[o + 14] = polys[o + 6]; polys[o + 15] = polys[o + 7];
+        // +x face (right on screen)
+        polys[o + 16] = px(x1, y0); polys[o + 17] = py(x1, y0, 0);
+        polys[o + 18] = polys[o + 10]; polys[o + 19] = polys[o + 11];
+        polys[o + 20] = polys[o + 4]; polys[o + 21] = polys[o + 5];
+        polys[o + 22] = polys[o + 2]; polys[o + 23] = polys[o + 3];
+
+        const tall = z * ce * s;
+        let f = 0;
+        if (tall > 0.35 && w * cs * s > 0.35) f |= 1;
+        if (tall > 0.35 && w * sn * s > 0.35) f |= 2;
+        faces[i] = f;
+
+        const L = lv[i] * 3;
+        let r = col[L];
+        let g = col[L + 1];
+        let bl = col[L + 2];
+        const d = dim[i];
+        if (d > 0.002) {
+          r += (ex - r) * 0.72 * d;
+          g += (ey - g) * 0.72 * d;
+          bl += (ez - bl) * 0.72 * d;
+        }
+        const hv = hover[i];
+        if (hv > 0.002) {
+          const m = 0.16 * hv;
+          r += (fg[0] - r) * m;
+          g += (fg[1] - g) * m;
+          bl += (fg[2] - bl) * m;
+        }
+        if (f & 1) {
+          ctx.beginPath();
+          quadPath(ctx, polys, o + 8, 0);
+          ctx.fillStyle = rgbString(r * 0.84, g * 0.84, bl * 0.84);
+          ctx.fill();
+        }
+        if (f & 2) {
+          ctx.beginPath();
+          quadPath(ctx, polys, o + 16, 0);
+          ctx.fillStyle = rgbString(r * 0.68, g * 0.68, bl * 0.68);
+          ctx.fill();
+        }
+        ctx.beginPath();
+        quadPath(ctx, polys, o, radius);
+        ctx.fillStyle = rgbString(r, g, bl);
+        ctx.fill();
+        if (outline > 0.004) {
+          ctx.strokeStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + outline.toFixed(3) + ")";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        if (hv > 0.02) {
+          ctx.strokeStyle = "rgba(" + fg[0] + "," + fg[1] + "," + fg[2] + "," + (0.85 * hv).toFixed(3) + ")";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+
+      // Labels: along the top and left in 2D, along the front edge in 3D. They fade, never pop.
+      const muted = mixRGB(bg, fg, 0.55);
+      ctx.font = font;
+      const a2 = 1 - smoothstep(0, 0.4, e);
+      const a3 = smoothstep(0.62, 1, e);
+      if (a2 > 0.004) {
+        ctx.fillStyle = "rgba(" + Math.round(muted[0]) + "," + Math.round(muted[1]) + "," + Math.round(muted[2]) + "," + a2.toFixed(3) + ")";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "bottom";
+        let edge = -Infinity;
+        for (const m of months) {
+          const x = px(m.week + off, -0.3);
+          const tw = ctx.measureText(m.label).width;
+          if (x < edge || x + tw > W) continue;
+          ctx.fillText(m.label, x, py(m.week + off, -0.3, 0) - 3);
+          edge = x + tw + 6;
+        }
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        if (gutter > 0) for (const r of weekdayRows) ctx.fillText(r.label, px(0, r.day + 0.5) - 6, py(0, r.day + 0.5, 0));
+      }
+      if (a3 > 0.004) {
+        ctx.fillStyle = "rgba(" + Math.round(muted[0]) + "," + Math.round(muted[1]) + "," + Math.round(muted[2]) + "," + a3.toFixed(3) + ")";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        let edge = -Infinity;
+        for (const m of months) {
+          const x = px(m.week + 0.5, 7.3);
+          if (x < edge || x + ctx.measureText(m.label).width > W) continue;
+          ctx.fillText(m.label, x, py(m.week + 0.5, 7.3, 0) + 2);
+          edge = x + ctx.measureText(m.label).width + 10;
+        }
+      }
+
+      // Tooltip rides the active cell through morphs and orbits.
+      if (activeIdx >= 0 && activeIdx < n) {
+        const i = activeIdx;
+        const z = zs[i] + hover[i] * lift;
+        const tx = px(wk[i] + 0.5, dy[i] + 0.5);
+        const ty = Math.min(py(wk[i] + off, dy[i] + off, z), py(wk[i] + off + w, dy[i] + off, z), py(wk[i] + off, dy[i] + off + w, z));
+        const half = tipW / 2;
+        const cx = Math.min(W - half - 2, Math.max(half + 2, tx));
+        tip.style.transform = "translate(" + (cx - half).toFixed(1) + "px," + (ty - 8).toFixed(1) + "px) translateY(-100%)";
+        tip.style.setProperty("--arrow", (tx - cx + half).toFixed(1) + "px");
+      }
+    };
+
+    const tick = (now) => {
+      raf = 0;
+      const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+      last = now;
+      let moving = false;
+
+      if (t !== target) {
+        const step = reduced ? 1 : (dt * 1000) / Math.max(1, cfg.current.duration);
+        t = target > t ? Math.min(target, t + step) : Math.max(target, t - step);
+        moving = true;
+      }
+
+      const ko = reduced ? 1 : 1 - Math.exp(-dt * 12);
+      yaw += (yawGoal - yaw) * ko;
+      elev += (elevGoal - elev) * ko;
+      if (Math.abs(yawGoal - yaw) > 1e-4 || Math.abs(elevGoal - elev) > 1e-4) moving = true;
+      else {
+        yaw = yawGoal;
+        elev = elevGoal;
+      }
+
+      const kc = reduced ? 1 : 1 - Math.exp(-dt * 7);
+      for (let k = 0; k < 15; k++) {
+        const d = colGoal[k] - col[k];
+        if (Math.abs(d) > 0.4) {
+          col[k] += d * kc;
+          moving = true;
+        } else col[k] = colGoal[k];
+      }
+
+      const kh = reduced ? 1 : 1 - Math.exp(-dt * 16);
+      const kd = reduced ? 1 : 1 - Math.exp(-dt * 10);
+      const leg = cfg.current.legendLevel;
+      for (let i = 0; i < n; i++) {
+        const hg = i === activeIdx ? 1 : 0;
+        const dg = leg >= 0 && lv[i] !== leg ? 1 : 0;
+        const h = hover[i];
+        const d = dim[i];
+        if (h !== hg) {
+          hover[i] = Math.abs(hg - h) < 0.003 ? hg : h + (hg - h) * kh;
+          moving = true;
+        }
+        if (d !== dg) {
+          dim[i] = Math.abs(dg - d) < 0.003 ? dg : d + (dg - d) * kd;
+          moving = true;
+        }
+      }
+
+      draw();
+      if (moving) raf = requestAnimationFrame(tick);
+    };
+
+    const kick = () => {
+      if (raf) return;
+      last = performance.now();
+      raf = requestAnimationFrame(tick);
+    };
+
+    // The active day is the hovered one, else the pinned one (tap, click or keyboard).
+    const refreshActive = () => {
+      const next = hovered >= 0 ? hovered : pinned;
+      if (next === activeIdx) return;
+      activeIdx = next;
+      cfg.current.setActive(next);
+      kick();
+    };
+
+    const hit = (x, y) => {
+      for (let k = n - 1; k >= 0; k--) {
+        const i = order[k];
+        const o = i * 24;
+        if (pointInQuad(polys, o, x, y)) return i;
+        if (faces[i] & 1 && pointInQuad(polys, o + 8, x, y)) return i;
+        if (faces[i] & 2 && pointInQuad(polys, o + 16, x, y)) return i;
+      }
+      return -1;
+    };
+
+    const local = (ev) => {
+      const r = canvas.getBoundingClientRect();
+      return [ev.clientX - r.left, ev.clientY - r.top];
+    };
+
+    let drag = null;
+
+    const onDown = (ev) => {
+      if (ev.button !== 0) return;
+      const can = cfg.current.orbit && target === 1;
+      drag = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, yaw: yawGoal, elev: elevGoal, moved: false, orbit: can, mouse: ev.pointerType === "mouse" };
+      if (can) {
+        try {
+          canvas.setPointerCapture(ev.pointerId);
+        } catch {
+          /* capture is a nicety */
+        }
+      }
+    };
+
+    const onMove = (ev) => {
+      if (drag && drag.orbit && ev.pointerId === drag.id) {
+        const dx = ev.clientX - drag.x;
+        const dyy = ev.clientY - drag.y;
+        if (drag.moved || Math.hypot(dx, dyy) > 4) {
+          drag.moved = true;
+          yawGoal = Math.min(YAW_RANGE[1] - YAW_3D, Math.max(YAW_RANGE[0] - YAW_3D, drag.yaw + dx * 0.006));
+          if (drag.mouse) elevGoal = Math.min(ELEV_RANGE[1] - ELEV_3D, Math.max(ELEV_RANGE[0] - ELEV_3D, drag.elev + dyy * 0.004));
+          canvas.style.cursor = "grabbing";
+          hovered = -1;
+          refreshActive();
+          kick();
+          return;
+        }
+      }
+      if (ev.pointerType !== "mouse") return;
+      const [x, y] = local(ev);
+      const i = hit(x, y);
+      if (i !== hovered) {
+        hovered = i;
+        refreshActive();
+      }
+      canvas.style.cursor = cfg.current.orbit && target === 1 ? "grab" : i >= 0 ? "pointer" : "default";
+    };
+
+    const onUp = (ev) => {
+      if (!drag || ev.pointerId !== drag.id) return;
+      const wasMoved = drag.moved;
+      drag = null;
+      if (canvas.hasPointerCapture(ev.pointerId)) canvas.releasePointerCapture(ev.pointerId);
+      canvas.style.cursor = cfg.current.orbit && target === 1 ? "grab" : "default";
+      if (wasMoved) return;
+      const [x, y] = local(ev);
+      const i = hit(x, y);
+      pinned = i === pinned ? -1 : i;
+      if (ev.pointerType !== "mouse") hovered = -1;
+      refreshActive();
+      if (i >= 0) {
+        const c = cfg.current.model.cells[i];
+        if (cfg.current.onCellClick) cfg.current.onCellClick({ date: c.date, count: c.count });
+      }
+    };
+
+    const onCancel = () => {
+      drag = null;
+    };
+
+    const onLeave = () => {
+      if (drag) return;
+      hovered = -1;
+      refreshActive();
+    };
+
+    const onDbl = () => {
+      yawGoal = 0;
+      elevGoal = 0;
+      kick();
+    };
+
+    const onKey = (ev) => {
+      const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "Escape", "Enter", " "];
+      if (!keys.includes(ev.key) || !n) return;
+      ev.preventDefault();
+      if (ev.key === "Escape") {
+        pinned = -1;
+        hovered = -1;
+        refreshActive();
+        return;
+      }
+      let i = pinned >= 0 ? pinned : activeIdx >= 0 ? activeIdx : n - 1;
+      if (ev.key === "Enter" || ev.key === " ") {
+        const c = cfg.current.model.cells[i];
+        if (cfg.current.onCellClick) cfg.current.onCellClick({ date: c.date, count: c.count });
+        return;
+      }
+      if (pinned >= 0 || activeIdx >= 0) {
+        if (ev.key === "ArrowLeft") i -= 7;
+        if (ev.key === "ArrowRight") i += 7;
+        if (ev.key === "ArrowUp") i -= 1;
+        if (ev.key === "ArrowDown") i += 1;
+        if (ev.key === "Home") i = 0;
+        if (ev.key === "End") i = n - 1;
+      }
+      i = Math.max(0, Math.min(n - 1, i));
+      pinned = i;
+      hovered = -1;
+      refreshActive();
+      cfg.current.setAnnounce(cfg.current.describe(i));
+    };
+
+    const onBlur = () => {
+      pinned = -1;
+      refreshActive();
+    };
+
+    const setTarget = () => {
+      const goal = cfg.current.target;
+      if (!entered) return;
+      if (goal !== target) {
+        target = goal;
+        if (goal === 0) {
+          yawGoal = 0;
+          elevGoal = 0;
+        }
+        canvas.style.cursor = cfg.current.orbit && target === 1 ? "grab" : "default";
+        kick();
+      }
+    };
+
+    load();
+    retheme();
+    relayout();
+
+    // The 3D view rises out of the flat one the first time it is seen.
+    const enter = () => {
+      if (entered) return;
+      entered = true;
+      if (reduced) t = cfg.current.target;
+      setTarget();
+    };
+    let io = null;
+    if ("IntersectionObserver" in window) {
+      io = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((en) => en.isIntersecting)) {
+            enter();
+            if (io) io.disconnect();
+          }
+        },
+        { threshold: 0.35 },
+      );
+      io.observe(stage);
+    } else enter();
+
+    const ro = new ResizeObserver(() => {
+      if (Math.round(stage.clientWidth) !== W) relayout();
     });
-  };
+    ro.observe(stage);
 
-  const handlePointerUp = (event) => {
-    if (dragRef.current?.pointerId === event.pointerId) {
-      dragRef.current = null;
-    }
-  };
+    const onReduce = () => {
+      reduced = reduceMq.matches;
+      kick();
+    };
+    reduceMq.addEventListener("change", onReduce);
 
-  const resetOrbit = () => {
-    setOrbit({
-      yaw: -35,
-      pitch: 58,
-    });
-  };
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onCancel);
+    canvas.addEventListener("pointerleave", onLeave);
+    canvas.addEventListener("dblclick", onDbl);
+    canvas.addEventListener("keydown", onKey);
+    canvas.addEventListener("blur", onBlur);
 
-  const heading =
-    title ||
-    `${model.total.toLocaleString()} ${
-      model.total === 1 ? unit : unitPlural
-    } in the last year`;
+    engine.current = {
+      kick: () => {
+        setTarget();
+        kick();
+      },
+      load: () => {
+        load();
+        retheme();
+        relayout();
+      },
+      retheme,
+      tipWidth: (w) => {
+        tipW = w;
+        draw();
+      },
+    };
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      if (io) io.disconnect();
+      ro.disconnect();
+      reduceMq.removeEventListener("change", onReduce);
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onCancel);
+      canvas.removeEventListener("pointerleave", onLeave);
+      canvas.removeEventListener("dblclick", onDbl);
+      canvas.removeEventListener("keydown", onKey);
+      canvas.removeEventListener("blur", onBlur);
+      engine.current = null;
+    };
+    // The loop reads everything else through cfg; it is built once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
+
+  React.useEffect(() => {
+    if (engine.current) engine.current.kick();
+  }, [view, legendLevel]);
+
+  React.useEffect(() => {
+    if (engine.current) engine.current.load();
+  }, [model, heightScale]);
+
+  React.useEffect(() => {
+    if (engine.current) engine.current.retheme();
+  }, [palette]);
+
+  // The tooltip's width is needed to keep it inside the card; measure it when its text changes.
+  React.useLayoutEffect(() => {
+    const tip = tipRef.current;
+    if (tip && active >= 0 && engine.current) engine.current.tipWidth(tip.offsetWidth);
+  }, [active, model]);
+
+  const { stats } = model;
+  const range = (a, b, withYear = false) => {
+    if (!a || !b) return "\u2014";
+    const f = withYear ? dfy : df;
+    return f.format(dayMs(a)) + " \u2014 " + f.format(dayMs(b));
+  };
+  const is3d = view === "3d";
+  const corners = showStats && width >= 560;
+  const bigSize = Math.round(Math.max(30, Math.min(56, width * 0.058)));
+  const statBlocks = [
+    { label: "1 year total", value: nf.format(stats.total), unit: noun(stats.total), sub: range(stats.first, stats.last, true) },
+    { label: "Busiest day", value: nf.format(stats.busiest.count), unit: noun(stats.busiest.count), sub: stats.busiest.date ? df.format(dayMs(stats.busiest.date)) : "\u2014" },
+    { label: "Longest streak", value: nf.format(stats.longest.days), unit: stats.longest.days === 1 ? "day" : "days", sub: range(stats.longest.start, stats.longest.end) },
+    { label: "Current streak", value: nf.format(stats.current.days), unit: stats.current.days === 1 ? "day" : "days", sub: range(stats.current.start, stats.current.end) },
+  ];
+  const showRow = showStats && !(is3d && corners);
+  const ease = "cubic-bezier(0.65, 0, 0.35, 1)";
+  const levelNames = ["No " + plural, "Light", "Moderate", "Heavy", "Heaviest"];
+
+  const hints = ["Hover a day for details \u00B7 arrow keys to explore", "Drag to orbit \u00B7 double-click to reset"];
+  const hint = hints[is3d && orbit ? 1 : 0];
 
   return (
     <section
-      className={`w-full rounded-[20px] border bg-white p-4 shadow-[0_8px_24px_rgba(28,51,46,0.12)] sm:p-5 ${className}`}
-      style={{ borderColor: BORDER, color: TEXT }}
+      ref={rootRef}
+      className={"relative w-full rounded-[20px] border p-4 font-figtree sm:p-5 " + className}
+      style={{ background: BG, color: FG, borderColor: BORDER }}
     >
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="m-0 text-[18px] font-semibold tracking-tight sm:text-[20px]">
-          {heading}
-        </h2>
-
-        <div
-          className="inline-flex rounded-lg border p-1"
-          style={{ borderColor: BORDER }}
-          role="group"
-          aria-label="Chart view"
-        >
-          <button
-            type="button"
-            aria-label="Flat heatmap"
-            aria-pressed={view === "2d"}
-            onClick={() => setView("2d")}
-            className={`grid h-8 w-9 place-items-center rounded-md transition-colors ${
-              view === "2d"
-                ? "bg-[#1F2937] text-white"
-                : "text-[#6B7280] hover:bg-[#EEF2FF]"
-            }`}
-          >
-            <Grid3X3 className="h-4 w-4" strokeWidth={1.8} />
-          </button>
-
-          <button
-            type="button"
-            aria-label="3D skyline"
-            aria-pressed={view === "3d"}
-            onClick={() => setView("3d")}
-            className={`grid h-8 w-9 place-items-center rounded-md transition-colors ${
-              view === "3d"
-                ? "bg-[#1F2937] text-white"
-                : "text-[#6B7280] hover:bg-[#EEF2FF]"
-            }`}
-          >
-            <Box className="h-4 w-4" strokeWidth={1.8} />
-          </button>
-        </div>
-      </header>
-
-      <div
-        className="rounded-[16px] border p-3 sm:p-4"
-        style={{ borderColor: BORDER }}
-      >
-        <div
-          ref={stageRef}
-          className="relative overflow-hidden rounded-xl"
-          style={{
-            height: stageHeight,
-            touchAction: view === "3d" ? "none" : "auto",
-            cursor: view === "3d" ? "grab" : "default",
-          }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onDoubleClick={resetOrbit}
-        >
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h3 className="m-0 text-[15px] font-normal leading-snug">
+          {title ?? (
+            <>
+              <span className="font-semibold tabular-nums">{nf.format(stats.total)}</span> {noun(stats.total)} in the last year
+            </>
+          )}
+        </h3>
+        {showToggle && (
           <div
-            className="absolute left-1/2 top-1/2 flex gap-[var(--cell-gap)] transition-transform duration-700 ease-[cubic-bezier(0.65,0,0.35,1)]"
-            style={{
-              "--cell-size": `${cellSize}px`,
-              "--cell-gap": `${gap}px`,
-              transform:
-                view === "3d"
-                  ? `translate(-50%, -43%) rotateX(${orbit.pitch}deg) rotateZ(${orbit.yaw}deg)`
-                  : "translate(-50%, -50%)",
-              transformStyle: "preserve-3d",
-            }}
+            role="group"
+            aria-label="Chart view"
+            className="relative inline-flex rounded-[8px] border p-0.5"
+            style={{ borderColor: BORDER }}
           >
-            {Array.from({ length: model.weeks }, (_, weekIndex) => (
-              <div
-                key={weekIndex}
-                className="flex flex-col gap-[var(--cell-gap)]"
+            <span
+              aria-hidden="true"
+              className="absolute top-0.5 bottom-0.5 left-0.5 w-8 rounded-[6px] transition-transform duration-500 motion-reduce:transition-none"
+              style={{
+                background: BRAND,
+                transform: is3d ? "translateX(100%)" : "translateX(0)",
+                transitionTimingFunction: ease,
+              }}
+            />
+            {["2d", "3d"].map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                aria-label={v === "2d" ? "Flat heat map" : "3D skyline"}
+                title={v === "2d" ? "Flat heat map" : "3D skyline"}
+                onClick={() => setView(v)}
+                className="relative z-10 grid h-7 w-8 cursor-pointer place-items-center rounded-[6px] border-0 bg-transparent p-0 transition-colors duration-500 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
                 style={{
-                  transformStyle: "preserve-3d",
+                  color: view === v ? BG : MUTED,
+                  outlineColor: BRAND,
                 }}
               >
-                {model.cells
-                  .filter((cell) => cell.week === weekIndex)
-                  .map((cell, index) => {
-                    const dimmed =
-                      activeLevel >= 0 && cell.level !== activeLevel;
-                    const height =
-                      cell.count > 0 && model.max > 0
-                        ? 0.4 +
-                          Math.pow(cell.count / model.max, 0.85) * 7.2
-                        : 0.2;
-
-                    return (
-                      <button
-                        key={cell.date}
-                        type="button"
-                        aria-label={`${cell.count} completed visit${
-                          cell.count === 1 ? "" : "s"
-                        } on ${formatDate(cell.date)}`}
-                        title={`${cell.count} completed visit${
-                          cell.count === 1 ? "" : "s"
-                        } on ${formatDate(cell.date)}`}
-                        onClick={() =>
-                          setSelected(
-                            selected?.date === cell.date ? null : cell,
-                          )
-                        }
-                        className={`h-[var(--cell-size)] w-[var(--cell-size)] shrink-0 rounded-[3px] border-0 p-0 transition-[transform,opacity,filter] duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A3BD9] ${
-                          dimmed ? "opacity-20" : "opacity-100"
-                        }`}
-                        style={{
-                          background: COLORS[cell.level],
-                          transform:
-                            view === "3d"
-                              ? `translateZ(${height * 7}px)`
-                              : "translateZ(0)",
-                          transitionDelay: `${Math.min(
-                            (weekIndex * 7 + index) * 2,
-                            420,
-                          )}ms`,
-                          boxShadow:
-                            view === "3d" && cell.count > 0
-                              ? "2px 3px 0 rgba(31,41,55,0.16)"
-                              : "inset 0 0 0 1px rgba(127,127,127,0.08)",
-                        }}
-                      />
-                    );
-                  })}
-              </div>
+                {v === "2d" ? <GridIcon /> : <CubeIcon />}
+              </button>
             ))}
-          </div>
-
-          <div className="pointer-events-none absolute bottom-2 left-0 right-0 flex justify-center gap-4 text-[12px] text-[#6B7280] sm:gap-8 sm:text-[13px]">
-            {monthLabels.map((label) => (
-              <span key={`${label.month}-${label.week}`}>
-                {label.month}
-              </span>
-            ))}
-          </div>
-
-          <div className="pointer-events-none absolute bottom-0 left-0 text-[12px] text-[#6B7280]">
-            {view === "3d"
-              ? "Drag to orbit · double-click to reset"
-              : "Hover a day for details · click to select"}
-          </div>
-        </div>
-
-        <div
-          className="grid gap-4 border-t pt-4 sm:grid-cols-2 lg:grid-cols-4"
-          style={{ borderColor: BORDER }}
-        >
-          <Stat
-            label="1 year total"
-            value={model.total.toLocaleString()}
-            unit={model.total === 1 ? unit : unitPlural}
-            sub={`${formatDate(model.cells[0].date)} — ${formatDate(
-              model.cells[model.cells.length - 1].date,
-            )}`}
-          />
-
-          <Stat
-            label="Busiest day"
-            value={model.busiest.count}
-            unit={model.busiest.count === 1 ? unit : unitPlural}
-            sub={
-              model.busiest.date
-                ? formatDate(model.busiest.date, false)
-                : "—"
-            }
-          />
-
-          <Stat
-            label="Longest streak"
-            value={model.longest.days}
-            unit="days"
-            sub={
-              model.longest.start
-                ? `${formatDate(model.longest.start, false)} — ${formatDate(
-                    model.longest.end,
-                    false,
-                  )}`
-                : "—"
-            }
-          />
-
-          <Stat
-            label="Current streak"
-            value={model.current.days}
-            unit="days"
-            sub={
-              model.current.start
-                ? `${formatDate(model.current.start, false)} — ${formatDate(
-                    model.current.end,
-                    false,
-                  )}`
-                : "—"
-            }
-          />
-        </div>
-
-        <div
-          className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[12px]"
-          style={{ color: MUTED }}
-        >
-          <span>{model.activeDays} active days</span>
-
-          <div className="flex items-center gap-1.5">
-            <span className="mr-1">Less</span>
-
-            {COLORS.map((color, index) => (
-              <button
-                key={color}
-                type="button"
-                aria-label={`Highlight activity level ${index}`}
-                aria-pressed={activeLevel === index}
-                onClick={() =>
-                  setActiveLevel(activeLevel === index ? -1 : index)
-                }
-                className="h-[11px] w-[11px] rounded-[2px] border-0 transition-transform hover:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A3BD9]"
-                style={{ background: color }}
-              />
-            ))}
-
-            <span className="ml-1">More</span>
-          </div>
-        </div>
-
-        {selected && (
-          <div
-            className="mt-3 rounded-lg px-3 py-2 text-[13px]"
-            style={{
-              background: "#EEF2FF",
-              color: TEXT,
-            }}
-          >
-            <strong>{selected.count}</strong>{" "}
-            {selected.count === 1 ? unit : unitPlural} on{" "}
-            <strong>{formatDate(selected.date)}</strong>
           </div>
         )}
+      </header>
+
+      <div className="relative rounded-[8px] border" style={{ borderColor: BORDER }}>
+        <div className="relative px-3 pt-3 sm:px-4 sm:pt-4">
+          <div
+            ref={stageRef}
+            className="relative w-full overflow-hidden rounded-[8px] outline-offset-4 has-[:focus-visible]:outline-2"
+            style={{ height: 150, outlineColor: BRAND }}
+          >
+            <canvas
+              ref={canvasRef}
+              tabIndex={0}
+              role="img"
+              aria-label={
+                nf.format(stats.total) + " " + noun(stats.total) + " between " + range(stats.first, stats.last, true) +
+                ", shown as a " + (is3d ? "3D skyline" : "heat map") + ". Use the arrow keys to read individual days."
+              }
+              className="absolute top-0 left-0 block outline-none"
+              style={{ maxWidth: "none", touchAction: is3d && orbit ? "pan-y" : "auto" }}
+            />
+
+            {showStats && corners && (
+              <>
+                <div
+                  aria-hidden={!is3d}
+                  className="pointer-events-none absolute top-1 right-1 flex flex-col items-end gap-5 transition-[opacity,transform] motion-reduce:transition-none"
+                  style={{
+                    opacity: is3d ? 1 : 0,
+                    transform: is3d ? "translateY(0)" : "translateY(-10px)",
+                    transitionDuration: is3d ? "600ms" : "300ms",
+                    transitionDelay: is3d ? Math.round(duration * 0.55) + "ms" : "0ms",
+                    transitionTimingFunction: ease,
+                  }}
+                >
+                  <Stat {...statBlocks[0]} accent={theme.accent} size={bigSize} align="end" />
+                  <Stat {...statBlocks[1]} accent={theme.accent} size={bigSize} align="end" />
+                </div>
+                <div
+                  aria-hidden={!is3d}
+                  className="pointer-events-none absolute bottom-1 left-1 flex flex-col items-start gap-5 transition-[opacity,transform] motion-reduce:transition-none"
+                  style={{
+                    opacity: is3d ? 1 : 0,
+                    transform: is3d ? "translateY(0)" : "translateY(10px)",
+                    transitionDuration: is3d ? "600ms" : "300ms",
+                    transitionDelay: is3d ? Math.round(duration * 0.65) + "ms" : "0ms",
+                    transitionTimingFunction: ease,
+                  }}
+                >
+                  <Stat {...statBlocks[2]} accent={theme.accent} size={bigSize} align="start" />
+                  <Stat {...statBlocks[3]} accent={theme.accent} size={bigSize} align="start" />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div
+            ref={tipRef}
+            role="tooltip"
+            aria-hidden={active < 0}
+            className="pointer-events-none absolute top-3 left-3 z-20 whitespace-nowrap rounded-[8px] px-2.5 py-1.5 text-[12px] leading-none shadow-[0_8px_24px_rgba(28,51,46,0.12)] transition-opacity duration-150 sm:top-4 sm:left-4 motion-reduce:transition-none"
+            style={{
+              opacity: active >= 0 ? 1 : 0,
+              background: FG,
+              color: BG,
+            }}
+          >
+            {active >= 0 && model.cells[active] ? (
+              <>
+                <strong className="font-semibold">
+                  {model.cells[active].count ? nf.format(model.cells[active].count) + " " + noun(model.cells[active].count) : "No " + plural}
+                </strong>
+                <span className="opacity-75"> on {dfy.format(dayMs(model.cells[active].date))}</span>
+              </>
+            ) : (
+              " "
+            )}
+            <span
+              aria-hidden="true"
+              className="absolute top-full h-0 w-0"
+              style={{
+                left: "var(--arrow, 50%)",
+                marginLeft: -5,
+                borderLeft: "5px solid transparent",
+                borderRight: "5px solid transparent",
+                borderTop: "5px solid " + FG,
+              }}
+            />
+          </div>
+        </div>
+
+        {showStats && (
+          <div
+            aria-hidden={!showRow}
+            className="grid transition-[grid-template-rows,opacity] motion-reduce:transition-none"
+            style={{
+              gridTemplateRows: showRow ? "1fr" : "0fr",
+              opacity: showRow ? 1 : 0,
+              transitionDuration: duration + "ms",
+              transitionTimingFunction: ease,
+            }}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4 px-3 pt-4 pb-1 sm:px-4 md:grid-cols-4">
+                {statBlocks.map((b) => (
+                  <Stat key={b.label} {...b} accent={theme.accent} size={28} align="stack" />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 pt-3 pb-3 text-[12px] sm:px-4" style={{ color: MUTED }}>
+          {footer === undefined ? (
+            <span className="relative grid flex-1">
+              {hints.map((h) => (
+                <span
+                  key={h}
+                  aria-hidden={h !== hint}
+                  className="[grid-area:1/1] transition-opacity duration-500 motion-reduce:transition-none"
+                  style={{ opacity: h === hint ? 1 : 0 }}
+                >
+                  {h}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="flex-1">{footer}</span>
+          )}
+          {showLegend && (
+            <div className="flex items-center gap-1.5" onMouseLeave={() => setLegendLevel(-1)}>
+              <span className="mr-0.5">Less</span>
+              {theme.swatches.map((c, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={"Highlight " + levelNames[i].toLowerCase() + " days"}
+                  aria-pressed={legendLevel === i}
+                  title={levelNames[i]}
+                  onMouseEnter={() => setLegendLevel(i)}
+                  onFocus={() => setLegendLevel(i)}
+                  onBlur={() => setLegendLevel(-1)}
+                  onClick={() => setLegendLevel((l) => (l === i ? -1 : i))}
+                  className="h-[11px] w-[11px] cursor-pointer rounded-[2px] border-0 p-0 transition-[background-color,transform] duration-500 hover:scale-125 focus-visible:outline-2 focus-visible:outline-offset-1 motion-reduce:transition-none"
+                  style={{
+                    background: c,
+                    outlineColor: BRAND,
+                    boxShadow: "inset 0 0 0 1px rgba(127,127,127,0.12)",
+                  }}
+                />
+              ))}
+              <span className="ml-0.5">More</span>
+            </div>
+          )}
+        </div>
       </div>
+
+      <p aria-live="polite" className="sr-only">
+        {announce}
+      </p>
     </section>
   );
 }
