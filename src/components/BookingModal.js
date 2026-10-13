@@ -4,7 +4,10 @@ import PetCard, { AddPetCard } from "./PetCard";
 import PetForm from "./PetForm";
 import FormField from "./FormField";
 import Alert from "./Alert";
+import ScheduleFields from "./ScheduleFields";
 import StepProgress from "./ui/step-progress";
+import { suggestedMinutes } from "../services/clinicSettings";
+import { formatDuration } from "../utils/time";
 
 const LABELS = ["Pet", "Veterinarian", "Details"];
 const AREA =
@@ -13,17 +16,6 @@ const primary =
   "h-11 rounded-[8px] bg-[#047857] px-8 text-[15px] font-semibold text-white transition-colors hover:bg-[#059669] disabled:cursor-not-allowed disabled:opacity-50";
 const ghost = "h-11 rounded-[8px] border border-[#D8DEE3] px-6 text-[15px] font-semibold hover:bg-[#F9FAFB]";
 
-const todayLocal = () =>
-  new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-const nowHHMM = () => {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
-const label12 = (t) => {
-  const [h, m] = t.split(":").map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
-};
-
 const Footer = ({ children }) => (
   <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[#D8DEE3] pt-6 sm:flex-row sm:justify-end">
     {children}
@@ -31,9 +23,9 @@ const Footer = ({ children }) => (
 );
 
 export default function BookingModal({
-  loading, pets, services, vets, times, taken,
+  loading, pets, services, vets,
   form, errors, serverError, saving,
-  onChange, onAddPet, onSubmit, onClose,
+  onChange, onPatch, onAddPet, onSubmit, onClose,
 }) {
   const [step, setStep] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -129,21 +121,19 @@ export default function BookingModal({
         {!loading && step === 3 && (
           <form onSubmit={onSubmit} noValidate className="space-y-4">
             <p className="text-[14px] text-[#4B5563]">{form.petName} · {form.vet}</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Service" name="service" as="select" theme="auth" value={form.service} onChange={onChange} error={errors.service}>
-                <option value="">Select service</option>
-                {services.map((s) => <option key={s} value={s}>{s}</option>)}
-              </FormField>
-              <FormField label="Date" name="date" type="date" theme="auth" min={todayLocal()} value={form.date} onChange={onChange} error={errors.date} />
-            </div>
-            <FormField label="Time" name="time" as="select" theme="auth" value={form.time} onChange={onChange} error={errors.time}>
-              <option value="">Select time</option>
-              {times.map((t) => (
-                <option key={t} value={t} disabled={taken.includes(t) || (form.date === todayLocal() && t <= nowHHMM())}>
-                  {label12(t)}{taken.includes(t) ? " (booked)" : ""}
-                </option>
-              ))}
+            <FormField label="Service" name="service" as="select" theme="auth" value={form.service} onChange={onChange} error={errors.service}>
+              <option value="">Select service</option>
+              {services.map((s) => <option key={s} value={s}>{s} · {formatDuration(suggestedMinutes(s))}</option>)}
             </FormField>
+            <ScheduleFields
+              service={form.service}
+              vet={form.vet}
+              date={form.date}
+              time={form.time}
+              endTime={form.endTime}
+              errors={errors}
+              onPatch={onPatch}
+            />
             <FormField
               label="Notes (optional)"
               name="notes"
