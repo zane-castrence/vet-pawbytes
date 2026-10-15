@@ -1,7 +1,14 @@
-export default function GoogleButton({ label }) {
+import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
+import { useAuth } from "../context/AuthContext";
+
+const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+// Same button as before (markup and classes unchanged); it now just has a click handler.
+function ButtonView({ label, onClick }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#D8DEE3] bg-white text-[15px] font-medium text-[#1F2937] transition-colors hover:bg-[#F9FAFB]"
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" aria-hidden="true">
@@ -12,5 +19,38 @@ export default function GoogleButton({ label }) {
       </svg>
       {label}
     </button>
+  );
+}
+
+// Opens Google's popup, then the server verifies the code. Login.js / SignUp.js redirect as soon as a user is set.
+function GoogleSignIn({ label }) {
+  const { loginWithGoogle } = useAuth();
+  const start = useGoogleLogin({
+    flow: "auth-code",
+    onSuccess: async ({ code }) => {
+      try {
+        await loginWithGoogle(code);
+      } catch (err) {
+        window.alert(err.message); // TODO(Zane): swap for an inline error in the design
+      }
+    },
+    onError: () => window.alert("Google sign-in failed. Please try again."),
+  });
+  return <ButtonView label={label} onClick={start} />;
+}
+
+export default function GoogleButton({ label }) {
+  if (!CLIENT_ID) {
+    return (
+      <ButtonView
+        label={label}
+        onClick={() => window.alert("Google sign-in is not set up yet. Add REACT_APP_GOOGLE_CLIENT_ID to the .env file in the project root, then restart npm start.")}
+      />
+    );
+  }
+  return (
+    <GoogleOAuthProvider clientId={CLIENT_ID}>
+      <GoogleSignIn label={label} />
+    </GoogleOAuthProvider>
   );
 }

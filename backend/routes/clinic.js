@@ -1,0 +1,10 @@
+const router = require("express").Router();
+const { requireAuth, requireRole } = require("../middleware/auth");
+const c = require("../controllers/clinic");
+router.use(requireAuth);
+router.get("/catalog", c.catalog);
+router.post("/catalog", requireRole("admin"), c.addItem);
+router.delete("/catalog", requireRole("admin"), c.removeItem);
+router.get("/settings", c.getSettings);
+router.put("/settings", requireRole("admin"), c.saveSettings);
+module.exports = router;

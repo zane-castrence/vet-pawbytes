@@ -1,7 +1,7 @@
 // Clinic hours and the suggested length of each service.
-// Mock layer: stored in localStorage like the rest of the demo data.
-// Arsi: move this into the backend (a settings document) and keep these exports.
+// The server (MongoDB) is the source of truth. localStorage is only a cache so reads stay synchronous.
 import { FALLBACK_MINUTES, MAX_MINUTES, STEP, toMinutes } from "../utils/time";
+import { request } from "./api";
 
 const KEY = "clinicSettings";
 const EVENT = "pawbytes-clinic-settings-updated";
@@ -27,6 +27,15 @@ const readRaw = () => {
   }
 };
 
+
+// Pulls the clinic settings from the server into the local cache (getClinicSettings stays synchronous).
+export async function loadClinicSettings() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(await request("/clinic/settings")));
+    window.dispatchEvent(new Event(EVENT));
+  } catch { /* keep the cached or default value */ }
+}
+
 // { open: "08:00", close: "17:00", minutes: { [service]: number } }
 export function getClinicSettings() {
   const raw = readRaw();
@@ -42,7 +51,7 @@ export function suggestedMinutes(service) {
 }
 
 // patch: { open?, close?, minutes? } (minutes is merged per service). Throws a readable Error.
-export function saveClinicSettings(patch) {
+export async function saveClinicSettings(patch) {
   const current = getClinicSettings();
   const next = {
     open: patch.open ?? current.open,
@@ -60,8 +69,8 @@ export function saveClinicSettings(patch) {
       throw new Error(`${service}: enter ${STEP} to ${MAX_MINUTES} minutes, in steps of ${STEP}.`);
     }
   }
-  localStorage.setItem(KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(EVENT));
+  await request("/clinic/settings", { method: "PUT", body: patch });
+  await loadClinicSettings();
   return getClinicSettings();
 }
 
