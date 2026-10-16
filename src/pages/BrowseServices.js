@@ -9,10 +9,26 @@ import AppointmentCard from "../components/ui/appointment-card";
 
 const localDate = () => {
   const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
 };
 
-// Customer overview: greeting, upcoming visits, and the clinic's services
+const SERVICE_IMAGES = {
+  "Check-up": "https://res.cloudinary.com/y029hvzd/image/upload/dog-1.png",
+  Vaccination: "https://res.cloudinary.com/y029hvzd/image/upload/dog-2.png",
+  Grooming: "https://res.cloudinary.com/y029hvzd/image/upload/dog-3.png",
+  "Dental cleaning":
+    "https://res.cloudinary.com/y029hvzd/image/upload/cat-4.png",
+  "Surgery consult":
+    "https://res.cloudinary.com/y029hvzd/image/upload/dog-5.png",
+  Emergency:
+    "https://res.cloudinary.com/y029hvzd/image/upload/dog-and-cat-6.png",
+  Deworming: "https://res.cloudinary.com/y029hvzd/image/upload/dog-7.png",
+  Other:
+    "https://res.cloudinary.com/y029hvzd/image/upload/dog-and-cat-8.png",
+};
+
 export default function BrowseServices() {
   const { user } = useAuth();
   const [services, setServices] = useState([]);
@@ -21,11 +37,21 @@ export default function BrowseServices() {
 
   useEffect(() => {
     Promise.all([getClinicCatalog(), getAppointments(user.id)])
-      .then(([catalog, appts]) => { setServices(catalog.services); setAppointments(appts); })
-      .catch(() => setError("Couldn't load your overview. Refresh to try again."));
+      .then(([catalog, appts]) => {
+        setServices(catalog.services);
+        setAppointments(appts);
+      })
+      .catch(() =>
+        setError("Couldn't load your overview. Refresh to try again.")
+      );
   }, [user.id]);
 
-  const upcoming = (appointments || []).filter((a) => ["Pending", "Scheduled"].includes(a.status) && a.date >= localDate());
+  const upcoming = (appointments || []).filter(
+    (appointment) =>
+      ["Pending", "Scheduled"].includes(appointment.status) &&
+      appointment.date >= localDate()
+  );
+
   const next = upcoming[0];
 
   return (
@@ -42,31 +68,60 @@ export default function BrowseServices() {
         ctaLabel="Book a visit"
         href="/book"
       />
-      <Alert className="mt-4 rounded-lg bg-[#FEE2E2] px-4 py-3 text-[14px] font-medium text-[#991B1B]">{error}</Alert>
 
-      <h2 className="mt-10 text-[28px] font-extrabold tracking-tight text-[#1F2937]">Your pet's schedule</h2>
+      <Alert className="mt-4 rounded-lg bg-[#FEE2E2] px-4 py-3 text-[14px] font-medium text-[#991B1B]">
+        {error}
+      </Alert>
+
+      <h2 className="mt-10 text-[28px] font-extrabold tracking-tight text-[#1F2937]">
+        Your pet's schedule
+      </h2>
+
       {!appointments ? (
-        <p className="mt-4 text-[15px] text-[#4B5563]">Loading your visits…</p>
+        <p className="mt-4 text-[15px] text-[#4B5563]">
+          Loading your visits…
+        </p>
       ) : upcoming.length === 0 ? (
         <div className="mt-4 rounded-[20px] border-2 border-dashed border-[#2A3BD9]/30 bg-[#EEF2FF] p-6 text-[15px] text-[#4B5563]">
           Nothing on the calendar yet.{" "}
-          <Link to="/book" className="font-semibold text-[#2A3BD9] underline underline-offset-2">Schedule a visit</Link>
+          <Link
+            to="/book"
+            className="font-semibold text-[#2A3BD9] underline underline-offset-2"
+          >
+            Schedule a visit
+          </Link>
         </div>
       ) : (
         <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {upcoming.slice(0, 4).map((a, i) => (
-            <AppointmentCard key={a.id} appointment={a} index={i} />
+          {upcoming.slice(0, 4).map((appointment, index) => (
+            <AppointmentCard
+              key={appointment.id}
+              appointment={appointment}
+              index={index}
+            />
           ))}
         </div>
       )}
-      <Link to="/my-appointments" className="mt-4 inline-block text-[14px] font-semibold text-[#2A3BD9] underline underline-offset-2">
+
+      <Link
+        to="/my-appointments"
+        className="mt-4 inline-block text-[14px] font-semibold text-[#2A3BD9] underline underline-offset-2"
+      >
         View all appointments
       </Link>
 
-      <h2 className="mt-10 text-[28px] font-extrabold tracking-tight text-[#1F2937]">Our services</h2>
+      <h2 className="mt-10 text-[28px] font-extrabold tracking-tight text-[#1F2937]">
+        Our services
+      </h2>
+
       <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {services.map((s, i) => (
-          <ServiceCard key={s} name={s} index={i} />
+        {services.map((service, index) => (
+          <ServiceCard
+            key={service}
+            name={service}
+            index={index}
+            image={SERVICE_IMAGES[service]}
+          />
         ))}
       </div>
     </section>
