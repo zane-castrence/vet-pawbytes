@@ -4,44 +4,85 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "@studio-freight/lenis";
 import "./parallax-scrolling.css";
 
+const HERO_BACKGROUND =
+  "https://res.cloudinary.com/y029hvzd/image/upload/pawbytes-hero-background.png";
+const HERO_FOREGROUND =
+  "https://res.cloudinary.com/y029hvzd/image/upload/pawbytes-hero-dog-removed-background.png";
+
+// Same outer margin as the Testimonials card (p-4 on mobile, p-8 from sm up).
+const FRAME_RADIUS = 20;
+const marginForScreen = () => (window.innerWidth >= 640 ? 32 : 16);
+
 export function ParallaxComponent() {
   const parallaxRef = useRef(null);
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
 
-    const triggerElement = parallaxRef.current?.querySelector(
-      "[data-parallax-layers]"
+    const root = parallaxRef.current;
+    const pin = root?.querySelector(".parallax__pin");
+    const header = root?.querySelector(".parallax__header");
+    const frame = root?.querySelector(".parallax__frame");
+    const layersEl = root?.querySelector("[data-parallax-layers]");
+    if (!pin || !header || !frame || !layersEl) return undefined;
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    if (reduceMotion) {
+      // No pin, no scroll animation: just show the finished rounded card.
+      const setStatic = () => {
+        header.style.padding = `${marginForScreen()}px`;
+      };
+      setStatic();
+      frame.style.borderRadius = `${FRAME_RADIUS}px`;
+      window.addEventListener("resize", setStatic);
+      return () => {
+        window.removeEventListener("resize", setStatic);
+        header.style.padding = "";
+        frame.style.borderRadius = "";
+      };
+    }
+
+    // The wrapper (.parallax__pin) is pinned. The header and frame inside it
+    // are animated, so GSAP never fights its own pin.
+    const tl = gsap.timeline({
+      defaults: { ease: "none" },
+      scrollTrigger: {
+        trigger: pin,
+        start: "top top",
+        end: "+=80%",
+        pin: true,
+        scrub: 0,
+        invalidateOnRefresh: true,
+      },
+    });
+
+    tl.fromTo(
+      header,
+      { padding: 0 },
+      { padding: () => marginForScreen(), duration: 1 },
+      0
+    );
+    tl.fromTo(
+      frame,
+      { borderRadius: 0 },
+      { borderRadius: FRAME_RADIUS, duration: 1 },
+      0
     );
 
-    let tl;
-    if (triggerElement) {
-      tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: triggerElement,
-          start: "0% 0%",
-          end: "100% 0%",
-          scrub: 0,
-        },
-      });
-
-      const layers = [
-        { layer: "1", yPercent: 70 },
-        { layer: "2", yPercent: 55 },
-        { layer: "3", yPercent: 40 },
-        { layer: "4", yPercent: 10 },
-      ];
-
-      layers.forEach((layerObj, idx) => {
-        tl.to(
-          triggerElement.querySelectorAll(
-            `[data-parallax-layer="${layerObj.layer}"]`
-          ),
-          { yPercent: layerObj.yPercent, ease: "none" },
-          idx === 0 ? undefined : "<"
-        );
-      });
-    }
+    [
+      { layer: "1", yPercent: 20 },
+      { layer: "3", yPercent: 20 },
+      { layer: "4", yPercent: 6 },
+    ].forEach(({ layer, yPercent }) => {
+      tl.to(
+        layersEl.querySelectorAll(`[data-parallax-layer="${layer}"]`),
+        { yPercent, duration: 1 },
+        0
+      );
+    });
 
     const lenis = new Lenis();
     lenis.on("scroll", ScrollTrigger.update);
@@ -51,66 +92,40 @@ export function ParallaxComponent() {
 
     return () => {
       gsap.ticker.remove(raf);
-      if (tl) {
-        tl.scrollTrigger?.kill();
-        tl.kill();
-      }
+      tl.scrollTrigger?.kill();
+      tl.kill();
       lenis.destroy();
+      gsap.set([header, frame], { clearProps: "all" });
     };
   }, []);
 
   return (
     <div className="parallax" ref={parallaxRef}>
-      <section className="parallax__header">
-        <div className="parallax__visuals">
-          <div className="parallax__black-line-overflow"></div>
-          <div data-parallax-layers className="parallax__layers">
-            <img
-              src="https://cdn.21st.dev/assets/mirror/a4/a43f4eae3459c461345ee676f12d6e1ddca65e8a5279a5af00d475b17ff83aea.webp"
-              loading="eager"
-              width="800"
-              data-parallax-layer="1"
-              alt=""
-              className="parallax__layer-img"
-            />
-            <img
-              src="https://cdn.21st.dev/assets/mirror/50/50ca6a0d36d2780bfcb469d6db7eaec0be7e0d2961ba69a63d2a1473b040338d.webp"
-              loading="eager"
-              width="800"
-              data-parallax-layer="2"
-              alt=""
-              className="parallax__layer-img"
-            />
-            <div data-parallax-layer="3" className="parallax__layer-title">
+      <div className="parallax__pin">
+        <section className="parallax__header">
+          <div className="parallax__frame">
+            <div data-parallax-layers className="parallax__layers">
+              <img
+                src={HERO_BACKGROUND}
+                loading="eager"
+                data-parallax-layer="1"
+                alt=""
+                className="parallax__layer-img parallax__layer-img--bg"
+              />
+              <div data-parallax-layer="3" className="parallax__layer-title">
                 <h2 className="parallax__title">PawBytes</h2>
+              </div>
+              <img
+                src={HERO_FOREGROUND}
+                loading="eager"
+                data-parallax-layer="4"
+                alt="Dog"
+                className="parallax__layer-img parallax__layer-img--fg"
+              />
             </div>
-            <img
-              src="https://cdn.21st.dev/assets/mirror/e1/e1c8137b5f971c3b3ec1a0f9e79b9c17018767005f844a10082b890472afecfb.webp"
-              loading="eager"
-              width="800"
-              data-parallax-layer="4"
-              alt=""
-              className="parallax__layer-img"
-            />
           </div>
-          <div className="parallax__fade"></div>
-        </div>
-      </section>
-
-      <section className="parallax__content">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="100%"
-          viewBox="0 0 160 160"
-          fill="none"
-          className="osmo-icon-svg"
-        >
-          <path
-            d="M94.8284 53.8578C92.3086 56.3776 88 54.593 88 51.0294V0H72V59.9999C72 66.6273 66.6274 71.9999 60 71.9999H0V87.9999H51.0294C54.5931 87.9999 56.3777 92.3085 53.8579 94.8283L18.3431 130.343L29.6569 141.657L65.1717 106.142C67.684 103.63 71.9745 105.396 72 108.939V160L88.0001 160L88 99.9999C88 93.3725 93.3726 87.9999 100 87.9999H160V71.9999H108.939C105.407 71.9745 103.64 67.7091 106.12 65.1938L106.142 65.1716L141.657 29.6568L130.343 18.3432L94.8284 53.8578Z"
-            fill="currentColor"
-          ></path>
-        </svg>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
