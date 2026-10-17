@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { RandomLetterSwap } from "./ui/random-letter-swap";
+import { scrollToSection } from "../utils/scroll";
 import GlassSurface from "./ui/glass-surface";
 
 const HEADING_LOGO =
@@ -43,8 +44,8 @@ export default function Navbar() {
 
   const links = !user
     ? [
-        ["Home", "/"],
-        ["Services", "/services"],
+        ["Home", "/#home", "home"],
+        ["Services", "/#services", "services"],
         ["Log in", "/login"],
       ]
     : isCustomer
@@ -64,8 +65,19 @@ export default function Navbar() {
     />
   );
 
-  const items = links.map(([label, to]) => (
-    <Link key={to} to={to}>
+  // Landing page links scroll to a section instead of opening a new page.
+  const goToSection = (event, id) => {
+    event.preventDefault();
+    if (pathname === "/") scrollToSection(id);
+    else navigate("/", { state: { scrollTo: id } });
+  };
+
+  const items = links.map(([label, to, section]) => (
+    <Link
+      key={to}
+      to={to}
+      onClick={section ? (event) => goToSection(event, section) : undefined}
+    >
       {swap(label)}
     </Link>
   ));
