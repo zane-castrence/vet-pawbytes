@@ -135,6 +135,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@shadcnspace/components/slider-06",
         usedIn: "Booking time range slider (start to end time)",
     },
+    {
+        name: "3D Flip Card",
+        author: "ShadcnSpace",
+        authorUrl: "https://21st.dev/@shadcnspace",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@shadcnspace/components/card-14",
+        usedIn: "Admin and staff appointment info popup (flip card)",
+    },
 ];
 
 export default credits;
