@@ -8,15 +8,28 @@
   color: var(--pb-text);
 }
 
-.parallax__header {
+/* Pinned by GSAP. Never animate this element itself. */
+.parallax__pin {
   position: relative;
-  height: 100svh;
-  overflow: hidden;
+  width: 100%;
+  background: var(--pb-bg);
 }
 
-.parallax__visuals {
-  position: absolute;
-  inset: 0;
+/* Its padding grows on scroll to make the outer margins. */
+.parallax__header {
+  position: relative;
+  box-sizing: border-box;
+  height: 100svh;
+  background: var(--pb-bg);
+}
+
+/* The visible hero card. Its corners round as the margins grow. */
+.parallax__frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--pb-brand);
 }
 
 .parallax__layers {
@@ -35,12 +48,24 @@
   pointer-events: none;
 }
 
+/* Sky is taller than the card so it never shows a gap while it drifts. */
+.parallax__layer-img--bg {
+  top: -30%;
+  height: 130%;
+}
+
+.parallax__layer-img--fg {
+  object-position: center bottom;
+}
+
+/* padding-bottom lifts the title. Raise it more to move the text higher. */
 .parallax__layer-title {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-bottom: 24svh;
   pointer-events: none;
 }
 
@@ -52,35 +77,4 @@
   line-height: 1;
   color: #FFFFFF;
   text-shadow: 0 4px 24px rgba(42, 59, 217, 0.35);
-}
-
-.parallax__fade {
-  display: none;
-}
-
-.parallax__black-line-overflow {
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 100%;
-  height: 2px;
-  background: var(--pb-bg);
-  z-index: 5;
-}
-
-.parallax__content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60svh;
-  overflow: hidden;
-  background: var(--pb-bg);
-}
-
-.osmo-icon-svg {
-  width: 8rem;
-  height: 8rem;
-  color: var(--pb-brand);
 }
