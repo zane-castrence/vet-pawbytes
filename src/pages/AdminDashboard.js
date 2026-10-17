@@ -5,6 +5,7 @@ import AppointmentForm, { STATUSES } from "../components/AppointmentForm";
 import Alert from "../components/Alert";
 import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
+import AppointmentInfoModal from "../components/AppointmentInfoModal";
 import DataTable from "../components/ui/data-table";
 import {
   Button, Card, Pill, SearchInput, Segmented, StatTile, PageHeader,
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
   const [accountSection, setAccountSection] = useState("customers");
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [viewingId, setViewingId] = useState("");
   const [bookingCustomerId, setBookingCustomerId] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -89,6 +91,7 @@ export default function AdminDashboard() {
   const customerAccounts = customers.filter((c) => !isTeam(c));
   const staffAccounts = customers.filter(isTeam);
   const ownAvailable = team.find((m) => m.id === user.id)?.available ?? true;
+  const viewing = viewingId ? appointments.find((a) => a.id === viewingId) : null;
 
   const q = search.trim().toLowerCase();
   const visibleAppointments = appointments.filter((a) =>
@@ -158,6 +161,7 @@ export default function AdminDashboard() {
       key: "actions", label: "", className: "text-right",
       render: (a) => (
         <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <Button size="sm" variant="secondary" aria-label={`View ${a.petName}'s appointment info`} onClick={() => setViewingId(a.id)}>Details</Button>
           {a.status === "Pending" && (
             <>
               <Button size="sm" onClick={() => setStatus(a, "Scheduled")}>Approve</Button>
@@ -262,6 +266,15 @@ export default function AdminDashboard() {
       <Segmented label="Workspace sections" options={tabOptions} value={tab}
         onChange={(id) => { setTab(id); setEditing(null); setCreating(false); }} />
 
+      {/* appointment info popup (admin + staff) */}
+      {viewing && (
+        <AppointmentInfoModal
+          appointment={viewing}
+          ownerEmail={isAdmin ? customers.find((c) => c.id === viewing.userId)?.email : ""}
+          onClose={() => setViewingId("")}
+        />
+      )}
+
       {/* edit + book windows */}
       {isAdmin && editing && (
         <Modal wide title="Edit appointment" subtitle={`${editing.petName} · ${editing.ownerName}`} onClose={() => setEditing(null)}>
@@ -314,6 +327,7 @@ export default function AdminDashboard() {
                         </dl>
                         {a.notes && <p className="mt-4 rounded-[8px] bg-[#F9FAFB] px-3 py-2 text-[14px] text-[#4B5563]"><span className="font-semibold text-[#1F2937]">Notes: </span>{a.notes}</p>}
                         <div className="mt-5 flex flex-wrap gap-2">
+                          <Button variant="secondary" onClick={() => setViewingId(a.id)}>Details</Button>
                           {!isAdmin && a.userId === user.id ? (
                             <p className="text-[14px] text-[#4B5563]">This is your own booking request. Another staff member or an admin must review it.</p>
                           ) : (
