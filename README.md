@@ -24,8 +24,8 @@ Built as a school group project for **Integrative Programming** and **Systems In
 ## Features
 
 **Pet owners**
-- Sign up and log in
-- Pet profiles with photo, age, weight, and vaccination status
+- Sign up and log in with email or Google
+- Pet profiles with photo upload, age, weight, and vaccination status
 - Book by service, veterinarian, date, and time range
 - View, cancel, and delete appointments
 
@@ -44,27 +44,71 @@ Built as a school group project for **Integrative Programming** and **Systems In
 |---|---|
 | Frontend | React 19 (Create React App), Tailwind CSS 3.4, React Router 7 |
 | Motion and 3D | Motion, GSAP, Lenis, Three.js |
-| Icons | lucide-react |
-| Backend | Node.js, Express, MongoDB (in progress, in `backend/`) |
-
-> The frontend currently runs on a **localStorage mock** (`src/services/api.js`). Data is saved in your browser only, until the backend is connected.
+| Backend | Node.js, Express 5, MongoDB (Mongoose) |
+| Auth | JWT, bcrypt, Google sign-in |
+| Image storage | Cloudinary |
 
 ## Getting started
+
+You need [Node.js](https://nodejs.org/) 20 or newer, a MongoDB connection string (a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster works), and the repo cloned:
 
 ```bash
 git clone https://github.com/zane-castrence/vet-pawbytes.git
 cd vet-pawbytes
+```
+
+### 1. Set up the environment files
+
+Create `backend/.env`:
+
+```env
+PORT=5001
+MONGODB_URI=your-mongodb-connection-string
+JWT_SECRET=any-long-random-string
+CLIENT_URL=http://localhost:3000
+
+# Pet photo upload (Cloudinary)
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# Google sign-in
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+```
+
+Create `.env` in the project root (only needed for Google sign-in):
+
+```env
+REACT_APP_GOOGLE_CLIENT_ID=
+```
+
+### 2. Run the backend
+
+In a terminal, go to the `backend` folder:
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+Optional, run once to create the demo admin and staff accounts and the default services, veterinarians, and clinic hours:
+
+```bash
+npm run seed
+```
+
+### 3. Run the website
+
+Open a **new terminal**, go to the root folder (`vet-pawbytes`), then:
+
+```bash
 npm install
 npm start
 ```
 
 The app opens at http://localhost:3000.
-
-Production build:
-
-```bash
-npm run build
-```
 
 ## Roles
 
@@ -76,28 +120,6 @@ npm run build
 
 Sign up creates a customer account.
 
-## Project structure
-
-```text
-src/
-  components/    shared UI, landing sections, booking modal
-  pages/         Home, Login, SignUp, MyPets, MyAppointments, AdminDashboard, ...
-  services/      api.js (data layer), clinicSettings.js
-  context/       AuthContext (session)
-  data/          services, testimonials, FAQs, credits
-  utils/         validators, time helpers
-backend/         Express API (in progress)
-docs/            backend handoff notes
-```
-
-## Team
-
-| Name | Role |
-|---|---|
-| Zane Castrence | UI/UX design and frontend |
-| Arsi | Backend |
-| Manuel | Systems analyst |
-
 ## Credits
 
-Some UI components come from 21st.dev and React Bits authors. The full list is on the in-app **Credits** page (`/credits`, also under Settings → About).
+Some UI components come from 21st.dev and React Bits authors. The full list is on the **Credits** page. You can open it from the footer, or after logging in, from your profile at the bottom of the sidebar (Settings → Credits).
