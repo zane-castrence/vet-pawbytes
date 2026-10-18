@@ -1,70 +1,103 @@
-# Getting Started with Create React App
+<div align="center">
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+<img src="https://res.cloudinary.com/y029hvzd/image/upload/pawbytes-pet-schedule.png" alt="PawBytes services page with the next appointment and pet schedule" width="900" />
 
-## Available Scripts
+<br />
 
-In the project directory, you can run:
+<img src="https://res.cloudinary.com/y029hvzd/image/upload/pawbytes-pet-profile.png" alt="PawBytes My pets page with pet profile cards" width="900" />
 
-### `npm start`
+# PawBytes
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**A veterinary clinic appointment website.**
+Pet owners book visits online. The clinic team manages the schedule.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+</div>
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## About
 
-### `npm run build`
+PawBytes lets pet owners save pet profiles and book appointments by picking a date and a start-to-end time. Clinic staff approve, complete, and manage visits from a dashboard. Booking checks the clinic's opening hours and blocks overlapping times for the same veterinarian.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Built as a school group project for **Integrative Programming** and **Systems Integration and Architecture** (NU-MOA).
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Features
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+**Pet owners**
+- Sign up and log in
+- Pet profiles with photo, age, weight, and vaccination status
+- Book by service, veterinarian, date, and time range
+- View, cancel, and delete appointments
 
-### `npm run eject`
+**Clinic team (admin, staff, veterinarian)**
+- Dashboard to approve, complete, edit, cancel, and delete appointments
+- Book on behalf of a customer
+- Manage services, veterinarians, and accounts
+- Stats page with a yearly visit heatmap that folds into a 3D skyline
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+**Landing page**
+- Parallax hero, services carousel, testimonials, and FAQ
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Tech stack
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+| Area | Tools |
+|---|---|
+| Frontend | React 19 (Create React App), Tailwind CSS 3.4, React Router 7 |
+| Motion and 3D | Motion, GSAP, Lenis, Three.js |
+| Icons | lucide-react |
+| Backend | Node.js, Express, MongoDB (in progress, in `backend/`) |
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+> The frontend currently runs on a **localStorage mock** (`src/services/api.js`). Data is saved in your browser only, until the backend is connected.
 
-## Learn More
+## Getting started
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+git clone https://github.com/zane-castrence/vet-pawbytes.git
+cd vet-pawbytes
+npm install
+npm start
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+The app opens at http://localhost:3000.
 
-### Code Splitting
+Production build:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+npm run build
+```
 
-### Analyzing the Bundle Size
+## Roles
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+| Role | Access |
+|---|---|
+| Customer | Services, My pets, My appointments, booking |
+| Staff / Veterinarian | Dashboard, appointment management |
+| Admin | Everything above, plus accounts, catalog, and Stats |
 
-### Making a Progressive Web App
+Sign up creates a customer account.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Project structure
 
-### Advanced Configuration
+```text
+src/
+  components/    shared UI, landing sections, booking modal
+  pages/         Home, Login, SignUp, MyPets, MyAppointments, AdminDashboard, ...
+  services/      api.js (data layer), clinicSettings.js
+  context/       AuthContext (session)
+  data/          services, testimonials, FAQs, credits
+  utils/         validators, time helpers
+backend/         Express API (in progress)
+docs/            backend handoff notes
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Team
 
-### Deployment
+| Name | Role |
+|---|---|
+| Zane Castrence | UI/UX design and frontend |
+| Arsi | Backend |
+| Manuel | Systems analyst |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Credits
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Some UI components come from 21st.dev and React Bits authors. The full list is on the in-app **Credits** page (`/credits`, also under Settings → About).
