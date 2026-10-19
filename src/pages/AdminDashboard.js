@@ -16,7 +16,7 @@ import { formatTimeRange } from "../utils/time";
 import {
   addClinicCatalogItem, createAppointment, createTeamAccount, deleteAppointment, deleteCustomer,
   getAllAppointments, getClinicCatalog, getClinicTeamAvailability, getCustomers,
-  removeClinicCatalogItem, setCustomerActive, setCustomerRole, setTeamAvailability, updateAppointment
+  removeClinicCatalogItem, setAppointmentArchived, setCustomerActive, setCustomerRole, setTeamAvailability, updateAppointment
 } from "../services/api";
 
 const localDate = () => {
@@ -25,6 +25,8 @@ const localDate = () => {
 };
 const isTeam = (c) => c.role === "staff" || c.role === "veterinarian";
 const emptyStaff = { name: "", email: "", password: "", role: "staff" };
+// archived appointments live on the Archive page, not in the active lists
+const unarchived = (list) => list.filter((a) => !a.archived);
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -62,7 +64,7 @@ export default function AdminDashboard() {
         isAdmin ? getClinicCatalog() : { services: [], vets: [] },
         getClinicTeamAvailability()
       ]);
-      setAppointments(appts); setCustomers(people); setCatalog(cat); setTeam(teamList);
+      setAppointments(unarchived(appts)); setCustomers(people); setCatalog(cat); setTeam(teamList);
       setError("");
     } catch { setError("Couldn't load the workspace. Please try again."); }
     finally { setLoading(false); }
@@ -71,7 +73,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     load();
     // auto-refresh appointments every 15 seconds so new requests show up
-    const timer = setInterval(() => getAllAppointments().then(setAppointments).catch(() => {}), 15000);
+    const timer = setInterval(() => getAllAppointments().then((list) => setAppointments(unarchived(list))).catch(() => {}), 15000);
     return () => clearInterval(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -169,6 +171,9 @@ export default function AdminDashboard() {
             </>
           )}
           {a.status === "Scheduled" && <Button size="sm" variant="secondary" onClick={() => setStatus(a, "Completed")}>Complete visit</Button>}
+          {["Completed", "Cancelled"].includes(a.status) && (
+            <Button size="sm" variant="secondary" onClick={() => run(() => setAppointmentArchived(a.id, true), "Appointment archived. Find it on the Archive page.")}>Archive</Button>
+          )}
           {isAdmin && (
             <>
               <Button size="icon" variant="secondary" aria-label={`Edit ${a.petName}'s appointment`} onClick={() => { setEditing(a); setCreating(false); }}>
