@@ -4,7 +4,7 @@ const validatePet = require("../utils/validatePet");
 const { fail } = require("../utils/httpError");
 
 exports.list = async (req, res) => {
-  const pets = await Pet.find({ ownerId: req.user._id });
+  const pets = await Pet.find({ ownerId: req.user._id, archived: { $ne: true } });
   res.json(pets.sort((a, b) => a.name.localeCompare(b.name)));
 };
 
