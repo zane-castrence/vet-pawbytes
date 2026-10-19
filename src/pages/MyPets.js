@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getPets, createPet, updatePet, deletePet } from "../services/api";
+import { getPets, createPet, updatePet, deletePet, setPetArchived } from "../services/api";
 import Alert from "../components/Alert";
 import PetCard, { AddPetCard } from "../components/PetCard";
 import PetModal from "../components/PetModal";
@@ -40,6 +40,15 @@ export default function MyPets() {
     load();
   };
 
+  // called from the Edit window; throws so PetModal shows the message
+  const archive = async (pet) => {
+    await setPetArchived(pet.id, true);
+    setModal(null);
+    setError("");
+    setMessage("Pet archived. Find it on the Archive page.");
+    load();
+  };
+
   return (
     <section className="font-figtree mx-auto max-w-[1376px] px-4 py-8 sm:px-8">
       <div className="flex items-center justify-between gap-4">
@@ -73,6 +82,7 @@ export default function MyPets() {
           pet={modal === "new" ? null : modal}
           onSave={save}
           onDelete={remove}
+          onArchive={archive}
           onClose={() => setModal(null)}
         />
       )}
