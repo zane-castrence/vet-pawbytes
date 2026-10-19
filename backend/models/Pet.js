@@ -16,7 +16,9 @@ const petSchema = new mongoose.Schema({
   medicalNotes: String,
   notes: String,
   microchipNumber: String,
-  photoUrl: String
+  photoUrl: String,
+  archived: { type: Boolean, default: false },
+  archivedAt: Date
 }, { timestamps: true });
 petSchema.set("toJSON", {
   ...toJSON,
