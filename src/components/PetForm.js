@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { CalendarDays } from "lucide-react";
+import AppleCalendarPicker from "./ui/apple-calendar-picker";
 import FormField from "./FormField";
 import Alert from "./Alert";
 
@@ -19,6 +21,9 @@ const SPECIES = ["Dog", "Cat", "Bird", "Rabbit", "Other"];
 
 const AREA =
   "rounded-lg border border-[#D8DEE3] bg-white px-3 py-2 text-[15px] text-[#1F2937] outline-none placeholder:text-[#9CA3AF] focus:border-[#2A3BD9] focus:ring-2 focus:ring-[#2A3BD9]/20";
+
+const DATE_TRIGGER =
+  "flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-[#D8DEE3] bg-white px-3 text-left text-[15px] text-[#1F2937] outline-none transition-colors hover:border-[#2A3BD9] focus:border-[#2A3BD9] focus:ring-2 focus:ring-[#2A3BD9]/20";
 
 const today = () =>
   new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
@@ -51,6 +56,11 @@ export default function PetForm({
   const [uploading, setUploading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const birthdayLabel = form.birthday
+    ? new Date(`${form.birthday}T00:00`).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })
+    : "Select birthdate";
 
   const change = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -194,15 +204,36 @@ export default function PetForm({
           <option>Male</option>
         </FormField>
 
-        <FormField
-          label="Birthdate"
-          name="birthday"
-          type="date"
-          theme="auth"
-          max={today()}
-          value={form.birthday}
-          onChange={change}
-        />
+        <div className="flex flex-col">
+          <label
+            htmlFor="pet-birthday"
+            className="mb-1.5 text-[13px] font-medium text-[#374151]"
+          >
+            Birthdate
+          </label>
+          <button
+            id="pet-birthday"
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setCalendarOpen(true)}
+            className={DATE_TRIGGER}
+          >
+            <span className={form.birthday ? "" : "text-[#9CA3AF]"}>
+              {birthdayLabel}
+            </span>
+            <CalendarDays
+              className="h-4 w-4 shrink-0 text-[#4B5563]"
+              strokeWidth={1.75}
+            />
+          </button>
+          <AppleCalendarPicker
+            isOpen={calendarOpen}
+            onClose={() => setCalendarOpen(false)}
+            value={form.birthday}
+            max={today()}
+            onSelect={(key) => setForm((current) => ({ ...current, birthday: key }))}
+          />
+        </div>
 
         <FormField
           label="Weight (kg)"
