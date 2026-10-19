@@ -13,6 +13,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminStats from "./pages/AdminStats";
 import Settings from "./pages/Settings";
 import Credits from "./pages/Credits";
+import Archive from "./pages/Archive";
 
 const customer = (page) => (
   <ProtectedRoute role="customer">{page}</ProtectedRoute>
@@ -57,6 +58,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/archive"
+            element={
+              <ProtectedRoute>
+                <Archive />
               </ProtectedRoute>
             }
           />
