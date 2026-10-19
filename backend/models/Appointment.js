@@ -16,7 +16,9 @@ const appointmentSchema = new mongoose.Schema({
   duration: Number,  // minutes
   notes: { type: String, default: "" },
   status: { type: String, enum: ["Pending", "Scheduled", "Completed", "Cancelled"], default: "Pending" },
-  completedAt: Date
+  completedAt: Date,
+  archived: { type: Boolean, default: false },
+  archivedAt: Date
 }, { timestamps: true });
 appointmentSchema.index({ vet: 1, date: 1 });
 appointmentSchema.set("toJSON", {
@@ -25,6 +27,7 @@ appointmentSchema.set("toJSON", {
     toJSON.transform(doc, ret);
     ret.userId = String(ret.userId);
     if (ret.completedAt) ret.completedAt = new Date(ret.completedAt).toISOString();
+    if (ret.archivedAt) ret.archivedAt = new Date(ret.archivedAt).toISOString();
     return ret;
   }
 });
