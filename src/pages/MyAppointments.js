@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getAppointments, updateAppointment, deleteAppointment } from "../services/api";
+import { getAppointments, updateAppointment, setAppointmentArchived } from "../services/api";
 import StatusBadge from "../components/StatusBadge";
 import Alert from "../components/Alert";
 import DataTable from "../components/ui/data-table";
@@ -32,9 +32,9 @@ export default function MyAppointments() {
     catch (err) { setError(err.message); }
   };
 
-  const remove = async (a) => {
-    if (!window.confirm(`Delete this record for ${a.petName}?`)) return;
-    try { await deleteAppointment(a.id); setMessage("Appointment deleted."); load(); }
+  const archive = async (a) => {
+    if (!window.confirm(`Archive this record for ${a.petName}? You can restore it from the Archive page.`)) return;
+    try { await setAppointmentArchived(a.id, true); setMessage("Appointment archived."); load(); }
     catch (err) { setError(err.message); }
   };
 
@@ -76,7 +76,7 @@ export default function MyAppointments() {
       render: (a) => (
         <>
           {["Pending", "Scheduled"].includes(a.status) && <Button variant="danger" size="sm" onClick={() => cancel(a)}>Cancel</Button>}
-          {["Completed", "Cancelled"].includes(a.status) && <Button variant="danger" size="sm" onClick={() => remove(a)}>Delete</Button>}
+          {["Completed", "Cancelled"].includes(a.status) && <Button variant="secondary" size="sm" onClick={() => archive(a)}>Archive</Button>}
         </>
       ),
     },
