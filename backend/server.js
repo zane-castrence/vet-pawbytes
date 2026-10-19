@@ -22,6 +22,7 @@ app.use("/api/clinic", require("./routes/clinic"));
 app.use("/api/accounts", require("./routes/accounts"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/uploads", require("./routes/uploads"));
+app.use("/api/archive", require("./routes/archive"));
 
 app.use((_req, res) => {
   res.status(404).json({ message: "Route not found." });
