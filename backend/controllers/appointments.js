@@ -16,7 +16,7 @@ const pick = (src, keys) => Object.fromEntries(keys.filter((k) => src[k] !== und
 const isTeam = (user) => TEAM.includes(user.role);
 const str = (v) => (typeof v === "string" ? v.trim() : "");
 
-exports.mine = async (req, res) => res.json(byDateTime(await Appointment.find({ userId: req.user._id })));
+exports.mine = async (req, res) => res.json(byDateTime(await Appointment.find({ userId: req.user._id, archived: { $ne: true } })));
 exports.all = async (_req, res) => res.json(byDateTime(await Appointment.find()));
 
 // Times only, never names or pet details.
@@ -43,7 +43,7 @@ exports.create = async (req, res) => {
 
   const data = { ...pick(body, EDITABLE) };
   if (body.petId) {
-    const pet = await Pet.findOne({ _id: body.petId, ownerId: owner._id }).catch(() => null);
+    const pet = await Pet.findOne({ _id: body.petId, ownerId: owner._id, archived: { $ne: true } }).catch(() => null);
     if (!pet) fail("That pet profile could not be found in your account.", 404);
     Object.assign(data, { petId: String(pet._id), petName: pet.name, species: pet.species, petPhoto: pet.photoUrl || "", ownerName: owner.name });
   }
