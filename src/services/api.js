@@ -80,6 +80,12 @@ export const setCustomerActive = async (userId, active) => { await request(`/acc
 export const setCustomerRole = async (userId, role) => { await request(`/accounts/${userId}/role`, { method: "PUT", body: { role } }); };
 export const deleteCustomer = async (userId) => { await request(`/accounts/${userId}`, { method: "DELETE" }); };
 
+// ---- Archive ----
+// { appointments: [...], pets: [...] } archived records only (customers: their own, clinic team: all appointments)
+export const getArchive = () => request("/archive");
+export const setAppointmentArchived = (id, archived) => request(`/archive/appointments/${id}`, { method: "PUT", body: { archived } });
+export const setPetArchived = (id, archived) => request(`/archive/pets/${id}`, { method: "PUT", body: { archived } });
+
 // ---- Notifications (no screen uses them yet) ----
 export const getNotifications = () => request("/notifications");
 export const markNotificationRead = async (userId, notificationId) => { await request(`/notifications/${notificationId}/read`, { method: "PUT" }); };
