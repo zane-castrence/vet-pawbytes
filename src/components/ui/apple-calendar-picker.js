@@ -10,6 +10,8 @@ import { motion, useReducedMotion } from "motion/react";
  * JS instead of TypeScript, design-system colors, radius and font, light theme only,
  * the time inputs are gone (the time range slider picks the time), and it takes a
  * `value` ("YYYY-MM-DD"), `min`, `max` and `isDayDisabled` so closed days can be blocked.
+ * Tapping the year in the month list opens a year list, so far-off dates (a pet's birthday)
+ * are a few taps away.
  */
 
 const MONTH_NAMES = [
@@ -52,7 +54,9 @@ function CalendarCard({ onClose, value, onSelect, min, max, isDayDisabled }) {
   const [year, setYear] = useState(start.y);
   const [month, setMonth] = useState(start.m);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showYears, setShowYears] = useState(false);
   const cardRef = useRef(null);
+  const yearsRef = useRef(null);
   const today = todayKey();
 
   // Esc closes the calendar (or its month list) and nothing behind it
@@ -61,12 +65,21 @@ function CalendarCard({ onClose, value, onSelect, min, max, isDayDisabled }) {
       if (e.key !== "Escape") return;
       e.preventDefault();
       e.stopPropagation();
-      if (showDropdown) setShowDropdown(false);
+      if (showYears) setShowYears(false);
+      else if (showDropdown) setShowDropdown(false);
       else onClose();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose, showDropdown]);
+  }, [onClose, showDropdown, showYears]);
+
+  // the year list opens scrolled to the current year
+  useEffect(() => {
+    if (!showYears) return;
+    const list = yearsRef.current;
+    const on = list?.querySelector("[data-year-on]");
+    if (list && on) list.scrollTop = on.offsetTop - list.clientHeight / 2 + on.clientHeight / 2;
+  }, [showYears]);
 
   // keyboard users land on the chosen day (or the first day they can pick)
   useEffect(() => {
@@ -87,6 +100,10 @@ function CalendarCard({ onClose, value, onSelect, min, max, isDayDisabled }) {
   const nextM = month === 11 ? 0 : month + 1;
   const prevBlocked = !!min && keyOf(prevY, prevM, getDaysInMonth(prevY, prevM)) < min;
   const nextBlocked = !!max && keyOf(nextY, nextM, 1) > max;
+  const thisYear = new Date().getFullYear();
+  const minYear = parseKey(min)?.y ?? thisYear - 60;
+  const maxYear = parseKey(max)?.y ?? thisYear + 10;
+  const years = Array.from({ length: Math.max(0, maxYear - minYear + 1) }, (_, i) => minYear + i);
   const monthBlocked = (y, idx) =>
     (!!min && keyOf(y, idx, getDaysInMonth(y, idx)) < min) || (!!max && keyOf(y, idx, 1) > max);
 
@@ -158,7 +175,7 @@ function CalendarCard({ onClose, value, onSelect, min, max, isDayDisabled }) {
         <div className="mb-4 flex items-center justify-between">
           <button
             type="button"
-            onClick={() => setShowDropdown((v) => !v)}
+            onClick={() => { setShowDropdown((v) => !v); setShowYears(false); }}
             aria-expanded={showDropdown}
             className="flex items-center gap-1 rounded-[8px] text-[17px] font-semibold text-[#2A3BD9] transition-opacity hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2A3BD9]"
           >
@@ -195,11 +212,39 @@ function CalendarCard({ onClose, value, onSelect, min, max, isDayDisabled }) {
                 <button type="button" onClick={() => setYear((y) => y - 1)} disabled={!!min && keyOf(year - 1, 11, 31) < min} aria-label="Previous year" className={NAV_BTN}>
                   <ChevronLeftIcon />
                 </button>
-                <span className="text-[16px] font-bold">{year}</span>
+                <button
+                  type="button"
+                  onClick={() => setShowYears((v) => !v)}
+                  aria-expanded={showYears}
+                  aria-label="Choose a year"
+                  className="rounded-[8px] px-2 py-0.5 text-[16px] font-bold text-[#2A3BD9] transition-colors hover:bg-[#EEF2FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2A3BD9]"
+                >
+                  {year}
+                </button>
                 <button type="button" onClick={() => setYear((y) => y + 1)} disabled={!!max && keyOf(year + 1, 0, 1) > max} aria-label="Next year" className={NAV_BTN}>
                   <ChevronRightIcon />
                 </button>
               </div>
+              {showYears ? (
+                <div ref={yearsRef} className="relative grid flex-1 grid-cols-4 content-start gap-1.5 overflow-y-auto">
+                  {years.map((y) => {
+                    const on = y === year;
+                    return (
+                      <button
+                        key={y}
+                        type="button"
+                        data-year-on={on ? "true" : undefined}
+                        onClick={() => { setYear(y); setShowYears(false); }}
+                        className={`rounded-[8px] py-1.5 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2A3BD9] ${
+                          on ? "bg-[#2A3BD9] text-white" : "text-[#1F2937] hover:bg-[#EEF2FF]"
+                        }`}
+                      >
+                        {y}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
               <div className="grid flex-1 grid-cols-3 gap-1.5 overflow-y-auto">
                 {MONTH_NAMES.map((m, idx) => {
                   const on = idx === month;
@@ -226,6 +271,7 @@ function CalendarCard({ onClose, value, onSelect, min, max, isDayDisabled }) {
                   );
                 })}
               </div>
+              )}
             </div>
           )}
         </div>
