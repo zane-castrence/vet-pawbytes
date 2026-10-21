@@ -3,7 +3,6 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthShell, { ALERT_CLASS, AuthButton, AuthDivider, AuthLink } from "../components/AuthShell";
 import GoogleButton from "../components/GoogleButton";
-import DemoAccounts from "../components/DemoAccounts";
 import FormField from "../components/FormField";
 import Alert from "../components/Alert";
 import { validateAuth } from "../utils/validators";
@@ -52,8 +51,6 @@ export default function Login() {
 
       <AuthDivider />
       <GoogleButton label="Continue with Google" />
-
-      <DemoAccounts onPick={(email, password) => setForm({ email, password })} /> {/* DEMO: delete this line */}
     </AuthShell>
   );
 }
