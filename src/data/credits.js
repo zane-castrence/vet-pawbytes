@@ -151,6 +151,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@olewandowski1/components/notifications-5",
         usedIn: "Alerts across the app (saved, archived, cancelled, errors, Google sign-in)",
     },
+        {
+        name: "Timesheet Confirmation",
+        author: "Ravi Katiyar",
+        authorUrl: "https://21st.dev/@ravikatiyar162",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@ravikatiyar162/components/timesheet-confirmation",
+        usedIn: "Booking confirmation window shown after a customer books a visit (layout inspiration)",
+    },
 ];
 
 export default credits;
