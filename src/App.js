@@ -6,7 +6,6 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import BrowseServices from "./pages/BrowseServices";
 import BookAppointment from "./pages/BookAppointment";
-import BookingConfirmation from "./pages/BookingConfirmation";
 import MyAppointments from "./pages/MyAppointments";
 import MyPets from "./pages/MyPets";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -40,10 +39,6 @@ function App() {
 
           <Route path="/services" element={customer(<BrowseServices />)} />
           <Route path="/book" element={customer(<BookAppointment />)} />
-          <Route
-            path="/confirmation"
-            element={customer(<BookingConfirmation />)}
-          />
           <Route
             path="/my-appointments"
             element={customer(<MyAppointments />)}
