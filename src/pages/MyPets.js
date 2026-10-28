@@ -4,14 +4,15 @@ import { getPets, createPet, updatePet, deletePet, setPetArchived } from "../ser
 import Alert from "../components/Alert";
 import PetCard, { AddPetCard } from "../components/PetCard";
 import PetModal from "../components/PetModal";
+import { useToast } from "../components/ui/alert-stack";
 
 export default function MyPets() {
   const { user } = useAuth();
+  const toast = useToast();
   const [pets, setPets] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [modal, setModal] = useState(null); // null | "new" | pet object
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
   const load = () =>
     getPets(user.id)
@@ -27,7 +28,7 @@ export default function MyPets() {
     else await createPet(user.id, data);
     setModal(null);
     setError("");
-    setMessage(editing ? "Pet updated." : "Pet added.");
+    toast.success(editing ? "Pet updated." : "Pet added.");
     load();
   };
 
@@ -36,7 +37,7 @@ export default function MyPets() {
     await deletePet(user.id, pet.id);
     setModal(null);
     setError("");
-    setMessage("Pet deleted.");
+    toast.success("Pet deleted.");
     load();
   };
 
@@ -45,7 +46,7 @@ export default function MyPets() {
     await setPetArchived(pet.id, true);
     setModal(null);
     setError("");
-    setMessage("Pet archived. Find it on the Archive page.");
+    toast.success("Pet archived.", "Find it on the Archive page.");
     load();
   };
 
@@ -65,9 +66,6 @@ export default function MyPets() {
 
       <Alert className="mt-4 rounded-[8px] border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-3 text-[14px] font-medium text-[#B91C1C]">
         {error}
-      </Alert>
-      <Alert type="success" className="mt-4 rounded-[8px] border border-[#A7F3D0] bg-[#ECFDF5] px-4 py-3 text-[14px] font-medium text-[#047857]">
-        {message}
       </Alert>
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
