@@ -1,5 +1,6 @@
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "./ui/alert-stack";
 
 const CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
@@ -25,26 +26,28 @@ function ButtonView({ label, onClick }) {
 // Opens Google's popup, then the server verifies the code. Login.js / SignUp.js redirect as soon as a user is set.
 function GoogleSignIn({ label }) {
   const { loginWithGoogle } = useAuth();
+  const toast = useToast();
   const start = useGoogleLogin({
     flow: "auth-code",
     onSuccess: async ({ code }) => {
       try {
         await loginWithGoogle(code);
       } catch (err) {
-        window.alert(err.message); // TODO(Zane): swap for an inline error in the design
+        toast.error(err.message || "Google sign-in failed. Please try again.");
       }
     },
-    onError: () => window.alert("Google sign-in failed. Please try again."),
+    onError: () => toast.error("Google sign-in failed.", "Please try again."),
   });
   return <ButtonView label={label} onClick={start} />;
 }
 
 export default function GoogleButton({ label }) {
+  const toast = useToast();
   if (!CLIENT_ID) {
     return (
       <ButtonView
         label={label}
-        onClick={() => window.alert("Google sign-in is not set up yet. Add REACT_APP_GOOGLE_CLIENT_ID to the .env file in the project root, then restart npm start.")}
+        onClick={() => toast.warning("Google sign-in is not set up yet.", "Add REACT_APP_GOOGLE_CLIENT_ID to the .env file in the project root, then restart npm start.")}
       />
     );
   }
