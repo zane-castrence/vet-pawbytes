@@ -5,7 +5,8 @@ import { getAppointments, updateAppointment, setAppointmentArchived } from "../s
 import StatusBadge from "../components/StatusBadge";
 import Alert from "../components/Alert";
 import DataTable from "../components/ui/data-table";
-import { Button, Segmented, PageHeader, buttonClass, PAGE_CLASS, ALERT_ERROR, ALERT_SUCCESS } from "../components/ui/app-controls";
+import { useToast } from "../components/ui/alert-stack";
+import { Button, Segmented, PageHeader, buttonClass, PAGE_CLASS, ALERT_ERROR } from "../components/ui/app-controls";
 import { formatDate } from "../utils/format";
 import { formatTimeRange } from "../utils/time";
 
@@ -13,10 +14,10 @@ const FILTERS = ["All", "Pending", "Scheduled", "Completed", "Cancelled"];
 
 export default function MyAppointments() {
   const { user } = useAuth();
+  const toast = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [filter, setFilter] = useState("All");
 
   const load = async () => {
@@ -28,14 +29,14 @@ export default function MyAppointments() {
 
   const cancel = async (a) => {
     if (!window.confirm(`Cancel ${a.petName}'s appointment on ${a.date}?`)) return;
-    try { await updateAppointment(a.id, { ...a, status: "Cancelled" }); setMessage("Appointment cancelled."); load(); }
-    catch (err) { setError(err.message); }
+    try { await updateAppointment(a.id, { ...a, status: "Cancelled" }); toast.success("Appointment cancelled."); load(); }
+    catch (err) { toast.error(err.message || "Couldn't cancel the appointment."); }
   };
 
   const archive = async (a) => {
     if (!window.confirm(`Archive this record for ${a.petName}? You can restore it from the Archive page.`)) return;
-    try { await setAppointmentArchived(a.id, true); setMessage("Appointment archived."); load(); }
-    catch (err) { setError(err.message); }
+    try { await setAppointmentArchived(a.id, true); toast.success("Appointment archived."); load(); }
+    catch (err) { toast.error(err.message || "Couldn't archive the appointment."); }
   };
 
   const visible = items.filter((a) => filter === "All" || a.status === filter);
@@ -90,7 +91,6 @@ export default function MyAppointments() {
         actions={<Link to="/book" className={buttonClass("primary")}>Book a visit</Link>}
       />
       <Alert className={ALERT_ERROR}>{error}</Alert>
-      <Alert type="success" className={ALERT_SUCCESS}>{message}</Alert>
 
       <Segmented label="Filter by status" options={options} value={filter} onChange={setFilter} />
 
