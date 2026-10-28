@@ -12,7 +12,6 @@ const NO_SIDEBAR = ["/login", "/signup"];
 const TITLES = {
   "/services": "Services",
   "/book": "Book appointment",
-  "/confirmation": "Confirmation",
   "/my-appointments": "My appointments",
   "/my-pets": "My pets",
   "/admin": "Dashboard",
