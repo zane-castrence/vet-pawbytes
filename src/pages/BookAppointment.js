@@ -5,6 +5,7 @@ import { createAppointment, createPet, getClinicCatalog, getPets } from "../serv
 import { validateAppointment } from "../utils/validators";
 import { toMinutes } from "../utils/time";
 import BookingModal from "../components/BookingModal";
+import BookingConfirmation from "../components/ui/booking-confirmation";
 import BrowseServices from "./BrowseServices";
 
 export default function BookAppointment() {
@@ -14,10 +15,12 @@ export default function BookAppointment() {
   const [pets, setPets] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [catalog, setCatalog] = useState({ services: [], vets: [] });
-  const [form, setForm] = useState({
+  const blankForm = () => ({
     ownerName: user.name, petId: "", petName: "", species: "",
     service: params.get("service") || "", vet: "", date: "", time: "", endTime: "", notes: "", status: "Pending"
   });
+  const [form, setForm] = useState(blankForm);
+  const [confirmed, setConfirmed] = useState(null); // the booked appointment, shown in the confirmation window
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -60,7 +63,7 @@ export default function BookAppointment() {
     try {
       const duration = toMinutes(form.endTime) - toMinutes(form.time);
       const appointment = await createAppointment(user.id, { ...form, duration }, { requirePetProfile: true });
-      navigate("/confirmation", { state: { appointment } });
+      setConfirmed(appointment);
     } catch (err) {
       setServerError(err.message);
     } finally {
@@ -68,25 +71,42 @@ export default function BookAppointment() {
     }
   };
 
+  // clears the form and goes back to step 1 for another booking
+  const bookAnother = () => {
+    setForm(blankForm());
+    setErrors({});
+    setServerError("");
+    setConfirmed(null);
+  };
+
   return (
     <>
       {/* shown blurred behind the modal */}
       <BrowseServices />
-      <BookingModal
-        loading={!loaded}
-        pets={pets}
-        services={catalog.services}
-        vets={catalog.vets}
-        form={form}
-        errors={errors}
-        serverError={serverError}
-        saving={saving}
-        onChange={change}
-        onPatch={patch}
-        onAddPet={addPet}
-        onSubmit={submit}
-        onClose={() => navigate("/services")}
-      />
+      {confirmed ? (
+        <BookingConfirmation
+          appointment={confirmed}
+          onClose={() => navigate("/services")}
+          onViewAll={() => navigate("/my-appointments")}
+          onBookAnother={bookAnother}
+        />
+      ) : (
+        <BookingModal
+          loading={!loaded}
+          pets={pets}
+          services={catalog.services}
+          vets={catalog.vets}
+          form={form}
+          errors={errors}
+          serverError={serverError}
+          saving={saving}
+          onChange={change}
+          onPatch={patch}
+          onAddPet={addPet}
+          onSubmit={submit}
+          onClose={() => navigate("/services")}
+        />
+      )}
     </>
   );
 }
