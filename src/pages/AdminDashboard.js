@@ -7,9 +7,10 @@ import StatusBadge from "../components/StatusBadge";
 import Modal from "../components/Modal";
 import AppointmentInfoModal from "../components/AppointmentInfoModal";
 import DataTable from "../components/ui/data-table";
+import { useToast } from "../components/ui/alert-stack";
 import {
   Button, Card, Pill, SearchInput, Segmented, StatTile, PageHeader,
-  PAGE_CLASS, H2_CLASS, INPUT_CLASS, ALERT_ERROR, ALERT_SUCCESS
+  PAGE_CLASS, H2_CLASS, INPUT_CLASS, ALERT_ERROR
 } from "../components/ui/app-controls";
 import { formatDate } from "../utils/format";
 import { formatTimeRange } from "../utils/time";
@@ -30,6 +31,7 @@ const unarchived = (list) => list.filter((a) => !a.archived);
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const toast = useToast();
   const isAdmin = user.role === "admin";
 
   const [appointments, setAppointments] = useState([]);
@@ -38,7 +40,6 @@ export default function AdminDashboard() {
   const [catalog, setCatalog] = useState({ services: [], vets: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [tab, setTab] = useState(isAdmin ? "overview" : "requests");
   const [accountSection, setAccountSection] = useState("customers");
   const [editing, setEditing] = useState(null);
@@ -80,9 +81,8 @@ export default function AdminDashboard() {
   // Runs an action, shows a success/error message, then reloads everything
   const run = async (action, success, confirmText) => {
     if (confirmText && !window.confirm(confirmText)) return;
-    setError(""); setMessage("");
-    try { await action(); setMessage(success); await load(); }
-    catch (err) { setError(err.message || "Something went wrong. Please try again."); }
+    try { await action(); toast.success(success); await load(); }
+    catch (err) { toast.error(err.message || "Something went wrong. Please try again."); }
   };
 
   const today = localDate();
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
     if (editing) await updateAppointment(editing.id, data);
     else if (bookingCustomerId) await createAppointment(bookingCustomerId, data);
     else throw new Error("Choose a customer account for this appointment.");
-    setMessage(editing ? "Appointment updated." : "Appointment booked for customer.");
+    toast.success(editing ? "Appointment updated." : "Appointment booked for customer.");
     setEditing(null); setCreating(false); setBookingCustomerId("");
     await load();
   };
@@ -266,7 +266,6 @@ export default function AdminDashboard() {
       />
 
       <Alert className={ALERT_ERROR}>{error}</Alert>
-      <Alert type="success" className={ALERT_SUCCESS}>{message}</Alert>
 
       <Segmented label="Workspace sections" options={tabOptions} value={tab}
         onChange={(id) => { setTab(id); setEditing(null); setCreating(false); }} />
