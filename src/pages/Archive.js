@@ -7,8 +7,9 @@ import {
 import Alert from "../components/Alert";
 import StatusBadge from "../components/StatusBadge";
 import DataTable from "../components/ui/data-table";
+import { useToast } from "../components/ui/alert-stack";
 import {
-  Button, Segmented, PageHeader, PAGE_CLASS, ALERT_ERROR, ALERT_SUCCESS
+  Button, Segmented, PageHeader, PAGE_CLASS, ALERT_ERROR
 } from "../components/ui/app-controls";
 import { formatDate } from "../utils/format";
 import { formatTimeRange } from "../utils/time";
@@ -18,13 +19,13 @@ const archivedOn = (iso) =>
 
 export default function Archive() {
   const { user } = useAuth();
+  const toast = useToast();
   const isCustomer = user.role === "customer";
   const canDelete = isCustomer || user.role === "admin";
 
   const [data, setData] = useState({ appointments: [], pets: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [tab, setTab] = useState("appointments");
 
   const load = async () => {
@@ -37,9 +38,8 @@ export default function Archive() {
   // Runs an action, shows a success/error message, then reloads the archive
   const run = async (action, success, confirmText) => {
     if (confirmText && !window.confirm(confirmText)) return;
-    setError(""); setMessage("");
-    try { await action(); setMessage(success); await load(); }
-    catch (err) { setError(err.message || "Something went wrong. Please try again."); }
+    try { await action(); toast.success(success); await load(); }
+    catch (err) { toast.error(err.message || "Something went wrong. Please try again."); }
   };
 
   const actions = (restore, remove) => (
@@ -107,7 +107,6 @@ export default function Archive() {
           : "Completed and cancelled appointments moved out of the active schedule. Stats still count archived visits."}
       />
       <Alert className={ALERT_ERROR}>{error}</Alert>
-      <Alert type="success" className={ALERT_SUCCESS}>{message}</Alert>
 
       {isCustomer && <Segmented label="Archived records" options={options} value={tab} onChange={setTab} />}
 
