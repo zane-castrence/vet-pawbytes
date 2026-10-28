@@ -143,6 +143,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@shadcnspace/components/card-14",
         usedIn: "Admin and staff appointment info popup (flip card)",
     },
+    {
+        name: "Dismissible Alert Stack",
+        author: "Oliver",
+        authorUrl: "https://21st.dev/@olewandowski1",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@olewandowski1/components/notifications-5",
+        usedIn: "Alerts across the app (saved, archived, cancelled, errors, Google sign-in)",
+    },
 ];
 
 export default credits;
