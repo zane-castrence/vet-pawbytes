@@ -3,6 +3,7 @@ import {
   Archive,
   BarChart3,
   CalendarDays,
+  CalendarRange,
   LayoutDashboard,
   LayoutGrid,
   PawPrint,
@@ -14,16 +15,19 @@ const CUSTOMER_LINKS = [
   { to: "/services", label: "Services", icon: LayoutGrid },
   { to: "/my-pets", label: "My pets", icon: PawPrint },
   { to: "/my-appointments", label: "My appointments", icon: CalendarDays },
+  { to: "/calendar", label: "Calendar", icon: CalendarRange },
   { to: "/archive", label: "Archive", icon: Archive },
 ];
 
 const STAFF_LINKS = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/calendar", label: "Calendar", icon: CalendarRange },
   { to: "/archive", label: "Archive", icon: Archive },
 ];
 
 const ADMIN_LINKS = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/calendar", label: "Calendar", icon: CalendarRange },
   { to: "/admin/stats", label: "Stats", icon: BarChart3 },
   { to: "/archive", label: "Archive", icon: Archive },
 ];
