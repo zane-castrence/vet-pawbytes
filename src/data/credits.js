@@ -159,6 +159,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@ravikatiyar162/components/timesheet-confirmation",
         usedIn: "Booking confirmation window shown after a customer books a visit (layout inspiration)",
     },
+    {
+        name: "Visualize Booking",
+        author: "LN",
+        authorUrl: "https://21st.dev/@ln-dev7",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@ln-dev7/components/visualize-booking",
+        usedIn: "Calendar page (month view with booking counts and appointment list)",
+    },
 ];
 
 export default credits;
