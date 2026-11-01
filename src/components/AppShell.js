@@ -16,6 +16,7 @@ const TITLES = {
   "/my-pets": "My pets",
   "/admin": "Dashboard",
   "/admin/stats": "Stats",
+  "/calendar": "Calendar",
   "/archive": "Archive",
   "/settings": "Settings",
   "/credits": "Credits",
