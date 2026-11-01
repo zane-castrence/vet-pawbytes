@@ -13,6 +13,7 @@ import AdminStats from "./pages/AdminStats";
 import Settings from "./pages/Settings";
 import Credits from "./pages/Credits";
 import Archive from "./pages/Archive";
+import Calendar from "./pages/Calendar";
 
 const customer = (page) => (
   <ProtectedRoute role="customer">{page}</ProtectedRoute>
@@ -62,6 +63,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Archive />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <Calendar />
               </ProtectedRoute>
             }
           />
