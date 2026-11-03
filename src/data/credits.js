@@ -167,6 +167,14 @@ const credits = [
         sourceUrl: "https://21st.dev/@ln-dev7/components/visualize-booking",
         usedIn: "Calendar page (month view with booking counts and appointment list)",
     },
+    {
+        name: "Notification List",
+        author: "Elliot Sutton",
+        authorUrl: "https://21st.dev/@skyleen77",
+        source: "21st.dev",
+        sourceUrl: "https://21st.dev/@skyleen77/components/components-community-notification-list",
+        usedIn: "Sidebar notifications (stacked list that expands on hover)",
+    },
 ];
 
 export default credits;
