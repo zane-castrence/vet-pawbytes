@@ -10,6 +10,7 @@ import {
   Plus,
 } from "lucide-react";
 import AccountMenu from "../AccountMenu";
+import NotificationCenter from "../NotificationCenter";
 
 const CUSTOMER_LINKS = [
   { to: "/services", label: "Services", icon: LayoutGrid },
@@ -84,7 +85,11 @@ export default function SidebarNav({ user, onLogout }) {
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-[#2A3BD9]/15 pt-3">
+      <div className="mt-auto pb-3 pt-4">
+        <NotificationCenter user={user} />
+      </div>
+
+      <div className="border-t border-[#2A3BD9]/15 pt-3">
         <AccountMenu user={user} onLogout={onLogout} variant="row" />
       </div>
     </div>
